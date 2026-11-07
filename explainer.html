@@ -1,0 +1,398 @@
+<meta charset="utf-8">
+<title>Signal, Noise and k</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a long-form explainer; each section = one claim, one figure, one control. */
+  :root {
+    --bg: #f6f3ec;
+    --surface: #fffdf8;
+    --fg: #1d1a16;
+    --muted: #6b655b;
+    --line: #ddd6c8;
+    --accent: #0f6e6e;       /* signal */
+    --accent-soft: #d9ecea;
+    --noise: #b8652c;        /* noise, the opposing idea */
+    --noise-soft: #f3e2d3;
+    --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --body: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181a; --surface: #1d2124; --fg: #ece7dd; --muted: #a39d92; --line: #343a3e;
+      --accent: #5fc2bd; --accent-soft: #1f3b3a; --noise: #e59a5c; --noise-soft: #3d2c1e; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181a; --surface: #1d2124; --fg: #ece7dd; --muted: #a39d92; --line: #343a3e;
+    --accent: #5fc2bd; --accent-soft: #1f3b3a; --noise: #e59a5c; --noise-soft: #3d2c1e; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+         padding-block: 24px 60px; }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 44px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1.05; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 28px; line-height: 1.1; margin: 0 0 8px; text-wrap: balance; }
+  h3 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: .02em; margin: 0 0 4px; }
+  p { max-width: 66ch; margin: 0 0 10px; }
+  .lede { font-size: 17px; color: var(--muted); max-width: 60ch; }
+  .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
+  section { display: grid; gap: 12px; }
+  figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  figure svg { width: 100%; height: auto; display: block; font-family: var(--body); }
+  figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; max-width: 70ch; }
+  .formula { font-family: var(--mono); font-size: 15px; background: var(--surface); border-left: 3px solid var(--accent); padding: 8px 12px; overflow-x: auto; white-space: nowrap; }
+  .formula b { color: var(--accent); font-weight: 500; }
+  .formula i { color: var(--noise); font-style: normal; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 13px; }
+  .controls label { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; margin-right: 6px; }
+  input[type=range] { accent-color: var(--accent); width: 180px; vertical-align: middle; }
+  select { font: inherit; font-size: 13px; padding: 4px 26px 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
+  select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .readout { font-family: var(--mono); font-size: 13px; }
+  .readout b { color: var(--accent); font-weight: 500; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+  .card h3 { margin-bottom: 6px; }
+  .card p { font-size: 14px; margin: 0; }
+  .num { font-family: var(--display); font-size: 30px; font-weight: 600; color: var(--accent); line-height: 1; }
+  .num.n { color: var(--noise); }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-family: var(--display); font-size: 14px; letter-spacing: .03em; color: var(--muted); font-weight: 600; }
+  td .bar { display: inline-block; height: 9px; background: var(--accent); vertical-align: middle; border-radius: 2px; margin-right: 6px; }
+  td.dash { color: var(--muted); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  code { font-family: var(--mono); font-size: 13px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .pill.n { background: var(--noise-soft); color: var(--noise); }
+  .steps { display: grid; gap: 6px; font-family: var(--mono); font-size: 13px; }
+  .steps div { padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+  .steps b { color: var(--accent); font-weight: 500; }
+  @media (prefers-reduced-motion: no-preference) { svg * { transition: opacity .2s; } }
+</style>
+
+<main>
+
+<header>
+  <div class="eyebrow">NBA team stats, 2015-16 to 2024-25</div>
+  <h1>Signal, Noise and k</h1>
+  <p class="lede">How many games before a team's numbers mean something, why that question has a one-number answer, and how to turn a hot start into an estimate you'd bet on.</p>
+</header>
+
+<!-- ============================================================ 1. motivation -->
+<section id="motivation">
+  <div class="eyebrow">Motivation</div>
+  <h2>One game is three times as noisy as the gap between teams</h2>
+  <p>Every stat you see after N games is <b>true level + noise</b>. For point margin, the noise in a single game has a standard deviation of 13.9 points. The true strength of NBA teams, best to worst, spreads only 4.7 points (SD). So a single result tells you almost nothing about which team you watched, and averaging is the only way out.</p>
+  <p style="font-size:14px;color:var(--muted)"><b>Noise, defined.</b> Take one team-season, subtract that team's own season-average margin from each of its 82 game margins, and take the SD of those 82 residuals; pool across all team-seasons. That is σ<sub>e</sub> = 13.9. It is <em>not</em> the SD of all game margins in the league (≈ 14.7), which also contains the differences between teams. Signal, σ<sub>T</sub> = 4.7, is the SD of season-average margins across teams after removing the part of their spread that is itself sampling noise: observed SD of the 30 season means is 4.94 (averaged over the 8 seasons), but an 82-game mean carries noise variance σ<sub>e</sub>²/82 = 13.9²/82 = 2.37, so σ<sub>T</sub>² = 4.94² − 2.37 = 22.1 and σ<sub>T</sub> = 4.7.</p>
+  <figure>
+    <svg viewBox="0 0 720 150" role="img" aria-label="Two bell curves on one point-margin axis: the narrow curve of true team strength (SD 4.7) sits inside the much wider curve of a single game's margin (SD 13.9).">
+      <defs>
+        <clipPath id="clipA"><rect x="40" y="10" width="640" height="110"/></clipPath>
+      </defs>
+      <g stroke="var(--line)" stroke-width="1">
+        <line x1="40" y1="120" x2="680" y2="120"/>
+      </g>
+      <g font-size="11" fill="var(--muted)" text-anchor="middle">
+        <text x="40" y="138">−40</text><text x="200" y="138">−20</text><text x="360" y="138">0</text><text x="520" y="138">+20</text><text x="680" y="138">+40</text>
+        <text x="700" y="124" text-anchor="start">pts</text>
+      </g>
+      <path id="curveNoise" fill="var(--noise-soft)" stroke="var(--noise)" stroke-width="2" d=""/>
+      <path id="curveTrue" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2" d=""/>
+      <text x="360" y="28" font-size="12" fill="var(--accent)" text-anchor="middle" font-weight="600">true strength, SD 4.7</text>
+      <text x="560" y="72" font-size="12" fill="var(--noise)" text-anchor="start" font-weight="600">one game's margin, SD 13.9</text>
+    </svg>
+    <figcaption>Both curves are centered on 0 (the league average). The ratio of their variances, 13.9² / 4.7² ≈ 8.8, is the whole story of this page: it is k.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ 2. k -->
+<section id="k">
+  <div class="eyebrow">Calculation</div>
+  <h2>k: the exchange rate between games and knowledge</h2>
+  <p>Take a team's average margin over its first n games. Two things are mixed into that number: the team's <b>true level</b>, which varies between teams with SD σ<sub>T</sub> = 4.7, and <b>leftover noise</b>, which averaging shrinks from 13.9 to 13.9/√n (after 7 games 5.3, after 30 games 2.5). Line the 30 teams up by their n-game averages: some of their spread is real, some is leftover noise. <b>Reliability</b> is the real share:</p>
+  <div class="formula">rel(n) = <b>σ<sub>T</sub>²</b> / (<b>σ<sub>T</sub>²</b> + <i>σ<sub>e</sub>²</i>/n) &nbsp;=&nbsp; n / (n + k), &nbsp; with &nbsp; k = <i>σ<sub>e</sub>²</i> / <b>σ<sub>T</sub>²</b></div>
+  <div class="steps">
+    <div>n = 7: true variance <b>22.1</b>, leftover noise variance 194/7 = <i>27.7</i> → rel = 22.1 / (22.1 + 27.7) = <b>0.44</b></div>
+    <div>same thing via k: 7 / (7 + 8.8) = <b>0.44</b>. Dividing top and bottom by σ<sub>T</sub>² is all that happened.</div>
+  </div>
+  <p>k is measured in games. It is the number of games of a team's own data that carry exactly as much information as the fact that it is an NBA team, i.e. as the league's distribution of strength. At n = k you are 50/50; at n = 2.3k you are 70% signal; at n = 9k, 90%.</p>
+  <figure>
+    <div class="controls">
+      <div><label for="kstat">stat</label><select id="kstat"></select></div>
+      <div><label for="nslider">games</label><input type="range" id="nslider" min="1" max="82" value="7"> <span class="readout" id="nread"></span></div>
+    </div>
+    <svg id="relChart" viewBox="0 0 720 260" role="img" aria-label="Reliability n/(n+k) rising with games played, for the chosen stat's k; a marker shows the chosen n."></svg>
+    <figcaption id="relCap"></figcaption>
+  </figure>
+  <div class="grid2">
+    <div class="card"><h3>Method 1 · moments</h3><div class="num">8.8</div><p>Pooled within-season variance of single-game margins (noise) divided by the between-team variance of season means minus its own sampling share (signal).</p></div>
+    <div class="card"><h3>Method 2 · split-half</h3><div class="num">8.5</div><p>Shuffle each season's 82 games into two halves of 41, correlate the two half-season means across teams (r = 0.83), invert r = 41/(41+k).</p></div>
+    <div class="card"><h3>Method 3 · curve fit</h3><div class="num n">11.7</div><p>Fit k to the real first-N-vs-rest curve. It comes out higher than the other two because teams drift within a season (trades, rest, tanking); the stationary model is slightly too optimistic.</p></div>
+  </div>
+  <figure>
+    <svg viewBox="0 0 720 170" role="img" aria-label="A season as a grid of 30 teams by 82 games; the split-half method colours a random 41 games teal and the rest orange, averages each colour per team, and correlates the two columns across teams.">
+      <g id="splitGrid"></g>
+      <g font-size="12" fill="var(--fg)">
+        <text x="12" y="20">30 teams ↓</text>
+        <text x="110" y="20">82 games →</text>
+        <text x="470" y="56" font-weight="600" fill="var(--accent)">mean of teal games</text>
+        <text x="470" y="106" font-weight="600" fill="var(--noise)">mean of orange games</text>
+        <text x="470" y="150" font-family="var(--mono)">corr across teams = 0.83 → k = 41·(1−r)/r = 8.5</text>
+      </g>
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#arr)">
+        <line x1="420" y1="52" x2="462" y2="52"/><line x1="420" y1="102" x2="462" y2="102"/>
+      </g>
+      <text x="395" y="48" font-size="11" fill="var(--muted)" text-anchor="end">per team</text>
+      <text x="395" y="98" font-size="11" fill="var(--muted)" text-anchor="end">per team</text>
+    </svg>
+    <figcaption>Split-half: because the two halves share the team but not the games, their correlation is pure signal-share. It needs no "end of season" value at all.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ 3. N_in / N_out -->
+<section id="nout">
+  <div class="eyebrow">Interpretation</div>
+  <h2>N<sub>in</sub> and N<sub>out</sub>: the same curve, measured honestly</h2>
+  <p>Narsu's 2017 table asked: after how many games does the correlation between a team's stats-so-far and its <em>final</em> stats pass r² = 0.5? That is <b>N<sub>in</sub></b>. But the final number contains the first N games, so the correlation is inflated and reaches 1 at N = 82 whatever the stat. <b>N<sub>out</sub></b> correlates the first N games with the <em>remaining</em> games instead.</p>
+  <figure>
+    <svg id="curveChart" viewBox="0 0 720 300" role="img" aria-label="r-squared against games played for Net Rtg, 2016 to 2025: the in-sample curve crosses 0.5 at 10 games and climbs to 1; the out-of-sample curve crosses at 16 and plateaus near 0.55."></svg>
+    <figcaption>Net Rtg, 2015-16 to 2024-25. In-sample (vs final season) crosses 0.5 at game 10, Narsu's 8 in his era. Out-of-sample (vs remaining games) crosses at 16 and then flattens: the remaining games are themselves noisy, so the ceiling is √(rel<sub>N</sub>·rel<sub>82−N</sub>).</figcaption>
+  </figure>
+  <div class="grid2">
+    <div class="card">
+      <h3>Why N<sub>out</sub> is often a dash</h3>
+      <p>The best any split can do is half-season vs half-season: r²<sub>max</sub> = (41/(41+k))². That exceeds 0.5 only when <b>k &lt; 17</b>. For 3PT% (k = 48) or Def Rtg (k = 19) no N ever qualifies. The dash means the between-team spread is small relative to game noise, not that the stat is useless.</p>
+    </div>
+    <div class="card">
+      <h3>Read k instead of a threshold</h3>
+      <p>0.5 (Narsu) and 0.7 (Blackport) are conventions. k converts any threshold into games: games for reliability t = k·t/(1−t). N<sub>in</sub> itself is k·41/(41+k) under the stationary model, so N<sub>in</sub> and k carry the same information, and k is the one you can also use to shrink.</p>
+      <div class="controls" style="margin-top:8px"><div><label for="kceil">k</label><input type="range" id="kceil" min="1" max="60" value="9"> <span class="readout" id="ceilread"></span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 4. all stats -->
+<section id="stats">
+  <div class="eyebrow">All the stats</div>
+  <h2>Style settles in a week; shooting defence never does</h2>
+  <p>The same three numbers for every box-score stat, 2015-16 to 2024-25 (82-game seasons, 240 team-seasons). The bar is reliability after 7 games, where the 2026-27 season stands.</p>
+  <div class="wrap"><table id="statTable">
+    <thead><tr><th>stat</th><th>k (games)</th><th>rel after 7</th><th>N<sub>in</sub></th><th>N<sub>out</sub></th><th>Narsu 2017</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <p style="font-size:13px;color:var(--muted)">Pace, 3PAr, FTR, AST%, Opp. 3PAr are style choices with no better direction; the rest are quality. KOBE/SHAC shot-quality stats from Narsu's table need tracking data and are not here.</p>
+</section>
+
+<!-- ============================================================ 5. priors -->
+<section id="prior">
+  <div class="eyebrow">Using it</div>
+  <h2>A prior is a measurement worth K games</h2>
+  <p>Shrinkage pools two measurements of the same thing by their precision: this season's average over n games, and a prior guess μ whose error has SD τ.</p>
+  <div class="formula">estimate = (n · x̄ + <b>K</b> · μ) / (n + <b>K</b>), &nbsp; <b>K</b> = <i>σ<sub>e</sub>²</i> / τ²</div>
+  <p>An n-game average has sampling variance σ<sub>e</sub>²/n. A prior with error variance τ² is therefore exactly as informative as K = σ<sub>e</sub>²/τ² games. "Worth 14 games" means: the prior's error SD equals the noise of a 14-game average. The plain k is the special case where the prior is the league itself (μ = league mean, τ = σ<sub>T</sub>).</p>
+  <figure>
+    <svg viewBox="0 0 720 120" role="img" aria-label="Two weights on a beam: this season's n games on the left, the prior worth K games on the right; the estimate sits at the balance point between the raw value and the prior mean.">
+      <g id="beam"></g>
+    </svg>
+    <figcaption id="beamCap"></figcaption>
+  </figure>
+  <figure>
+    <div class="controls">
+      <div><label for="team">team</label><select id="team">
+        <option value="MEM">MEM · +12.7 after 7, was −5.9</option>
+        <option value="OKC">OKC · +0.3 after 7, was +11.1</option>
+        <option value="HOU">HOU · +13.2 after 8, was +5.4</option>
+        <option value="CHO">CHO · −11.8 after 8, was +5.0</option>
+      </select></div>
+      <div><label for="pn">games</label><input type="range" id="pn" min="1" max="82" value="7"> <span class="readout" id="pnread"></span></div>
+    </div>
+    <div class="wrap"><table id="priorTable">
+      <thead><tr><th>prior</th><th>μ</th><th>τ</th><th>K (games)</th><th>weight on season</th><th>estimate</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <figcaption>Net Rtg per 100 possessions: σ<sub>e</sub> ≈ 14 per game, σ<sub>T</sub> ≈ 4.9 (both pooled over 2016–2026), so k = 8.6. The regressed prior comes from a regression of each season on the previous one across 2016–2026 (ρ = 0.58, residual SD 3.8 after the sampling noise is removed). Its smaller τ makes it worth 14 games instead of 8.6.</figcaption>
+  </figure>
+  <div class="grid2">
+    <div class="card"><h3>League mean</h3><p>μ = 0, τ = σ<sub>T</sub>. Assumes nothing about the team. Compresses everyone toward average but keeps this season's order. The padding in the 2026-11-04 report, §3.5.</p></div>
+    <div class="card"><h3>Last season, raw</h3><p>μ = last season's value, τ = σ<sub>T</sub> by choice. A half-measure: it uses last year's number but admits as much uncertainty as knowing nothing, so it gets the same K as the league prior.</p></div>
+    <div class="card"><h3>Last season, regressed</h3><p>μ = 0.58 × last season, τ = 3.8. What last year actually predicts about this year, fitted on ten season pairs. Worth 14 games, so after 7 games it still holds 67% of the weight.</p></div>
+    <div class="card"><h3>Your projection</h3><p>Any pre-season number (a model, a market line) with its own K = σ<sub>e</sub>²/τ². A line with error SD 3.5 is worth about 16 games. Supply it as <code>--prior-csv</code>.</p></div>
+  </div>
+  <p>All four give the team's <b>current true level</b>, not a season total. A projected final = (n·raw + (82−n)·estimate)/82.</p>
+</section>
+
+<!-- ============================================================ 6. quarters -->
+<section id="quarters">
+  <div class="eyebrow">A test of the method</div>
+  <h2>Quarters: more observations, not more information</h2>
+  <p>Splitting a game into four quarters quadruples the rows but not the possessions, and the pieces are not equal. Signal per quarter falls through the game; the "fourth-quarter team" deviation is weakly real, and mostly a side-effect of big leads and bench minutes.</p>
+  <div class="wrap"><table>
+    <thead><tr><th>unit (2021-22 to 2024-25)</th><th>noise SD</th><th>k (games)</th><th>rel @ 82</th><th>Q<sub>i</sub> − game mean: rel @ 82</th></tr></thead>
+    <tbody>
+      <tr><td>full game</td><td>14.5</td><td>8.6</td><td>0.91</td><td class="dash">—</td></tr>
+      <tr><td>Q1</td><td>8.4</td><td>24</td><td>0.77</td><td>0.29</td></tr>
+      <tr><td>Q2</td><td>8.2</td><td>46</td><td>0.64</td><td>0.00</td></tr>
+      <tr><td>Q3</td><td>8.5</td><td>41</td><td>0.67</td><td>0.12</td></tr>
+      <tr><td>Q4</td><td>7.9</td><td>114</td><td>0.42</td><td>0.44</td></tr>
+      <tr><td>2nd half − 1st half</td><td>17.2</td><td>188</td><td>0.30</td><td class="dash">—</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:13px;color:var(--muted)">Independence would give quarter noise SD 14.5/2 = 7.25; the real 7.9–8.5 says quarter margins are negatively correlated within a game (leads get managed).</p>
+</section>
+
+<!-- ============================================================ 7. reading the rank page -->
+<section id="reading">
+  <div class="eyebrow">Reading the rankings page</div>
+  <h2>What each column is</h2>
+  <dl class="kv">
+    <dt>raw</dt><dd>this season's value, ratio of season-to-date sums</dd>
+    <dt>Δ</dt><dd>raw minus last season's full value</dd>
+    <dt>z</dt><dd>Δ divided by the sampling noise of both values; |z| &gt; 2 is unlikely to be luck, but says nothing about the cause</dd>
+    <dt>league mean / last season / regressed</dt><dd>the estimate under each prior, and the rank it implies</dd>
+    <dt>k</dt><dd>that stat's exchange rate; small k means the raw value already dominates the prior</dd>
+  </dl>
+  <p style="font-size:13px;color:var(--muted)">Source: <code>nba-stab</code> on Basketball-Reference game logs; curves and k from 2015-16 to 2024-25, rankings from 2026-27 games through 4 Nov 2026.</p>
+</section>
+
+</main>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const svgNS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+
+  // ---------- data (real, from nba-stab) ----------
+  const SIG_E = 13.9, SIG_T = 4.7;
+  const STATS = [
+    ["3PAr", 2.2, 4, 4, 4], ["Pace", 4.9, 6, 10, 4], ["AST%", 6.1, 7, 10, 6], ["Net Rtg", 8.5, 10, 16, 8],
+    ["ORB%", 9.5, 11, null, 11], ["Opp. 3PAr", 10.5, 16, null, 7], ["Opp. TOV%", 11.5, 14, null, 15], ["Win%", 11.5, 10, 17, 8],
+    ["TS%", 12.5, 10, null, 12], ["Off Rtg", 12.5, 12, null, 13], ["REB%", 12.5, 15, null, 15], ["2PT%", 13.0, 13, 46, 11],
+    ["EFG%", 13.6, 11, 45, 12], ["FT%", 13.7, 12, null, 16], ["Opp. FTR", 14.7, 16, null, 14], ["TOV%", 15.5, 10, null, 10],
+    ["FTR", 17.6, 15, null, 5], ["Def Rtg", 18.6, 16, null, 16], ["Opp. 2PT%", 21.2, 17, null, 18], ["Opp. EFG%", 25.5, 17, null, 14],
+    ["DRB%", 28.5, 20, null, 15], ["3PT%", 48.5, 23, null, 26], ["Opp. 3PT%", 148.6, 40, null, 33],
+  ];
+  const CURVE_N = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,22,24,26,28,30,33,36,41,46,51,56,61,66,71];
+  const R_IN = [0.303,0.448,0.487,0.556,0.601,0.61,0.648,0.685,0.702,0.714,0.734,0.75,0.766,0.794,0.804,0.816,0.828,0.828,0.832,0.844,0.858,0.861,0.872,0.884,0.892,0.897,0.909,0.927,0.94,0.956,0.968,0.975,0.981,0.989];
+  const R_OUT = [0.268,0.404,0.43,0.494,0.538,0.536,0.572,0.604,0.616,0.623,0.641,0.653,0.667,0.698,0.705,0.714,0.723,0.719,0.718,0.73,0.731,0.72,0.726,0.732,0.735,0.728,0.734,0.742,0.735,0.747,0.738,0.713,0.702,0.677];
+  // Net Rtg per 100 possessions, 2026-27 examples (games played, raw, last season)
+  const TEAMS = { MEM: [7, 12.7, -5.9], OKC: [7, 0.3, 11.1], HOU: [8, 13.2, 5.4], CHO: [8, -11.8, 5.0] };
+  const P = { sigE: 14.2, sigT: 4.85, k: 8.6, rho: 0.58, tau: 3.79 };
+  P.K = P.sigE * P.sigE / (P.tau * P.tau);  // ≈ 14
+
+  // ---------- 1. two bells ----------
+  function bell(sd, peak) {
+    const pts = [];
+    for (let x = -40; x <= 40; x += 1) { const y = peak * Math.exp(-x * x / (2 * sd * sd)); pts.push([360 + x * 8, 120 - y]); }
+    return "M" + pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join("L") + "L680,120L40,120Z";
+  }
+  $("curveNoise").setAttribute("d", bell(SIG_E, 60));
+  $("curveTrue").setAttribute("d", bell(SIG_T, 100));
+
+  // ---------- 2. reliability chart ----------
+  const ksel = $("kstat");
+  STATS.forEach(s => { const o = document.createElement("option"); o.value = s[1]; o.textContent = `${s[0]} (k = ${s[1]})`; if (s[0] === "Net Rtg") o.selected = true; ksel.appendChild(o); });
+  function drawRel() {
+    const k = +ksel.value, n = +$("nslider").value;
+    const svg = $("relChart"); svg.innerHTML = "";
+    const L = 50, R = 700, T = 20, B = 220;
+    const x = g => L + (g - 1) / 81 * (R - L), y = r => B - r * (B - T);
+    [0, .25, .5, .7, .9, 1].forEach(r => { svg.appendChild(el("line", { x1: L, x2: R, y1: y(r), y2: y(r), stroke: "var(--line)", "stroke-width": 1 })); svg.appendChild(el("text", { x: L - 8, y: y(r) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, r.toFixed(2))); });
+    [1, 10, 20, 30, 41, 50, 60, 70, 82].forEach(g => svg.appendChild(el("text", { x: x(g), y: B + 16, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, g)));
+    svg.appendChild(el("text", { x: R, y: B + 34, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, "games played"));
+    svg.appendChild(el("text", { x: L - 8, y: T - 6, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, "reliability"));
+    let d = "";
+    for (let g = 1; g <= 82; g++) d += (g === 1 ? "M" : "L") + x(g).toFixed(1) + "," + y(g / (g + k)).toFixed(1);
+    svg.appendChild(el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 2.5 }));
+    // k marker
+    if (k <= 82) { svg.appendChild(el("line", { x1: x(k), x2: x(k), y1: y(.5), y2: B, stroke: "var(--accent)", "stroke-dasharray": "3 3", "stroke-width": 1 })); svg.appendChild(el("text", { x: x(k) + 4, y: B - 6, "font-size": 11, fill: "var(--accent)" }, `n = k = ${k}`)); }
+    const rel = n / (n + k);
+    svg.appendChild(el("line", { x1: x(n), x2: x(n), y1: T, y2: B, stroke: "var(--noise)", "stroke-width": 1 }));
+    svg.appendChild(el("circle", { cx: x(n), cy: y(rel), r: 5, fill: "var(--noise)", stroke: "var(--surface)", "stroke-width": 2 }));
+    svg.appendChild(el("text", { x: Math.min(x(n) + 8, R - 120), y: y(rel) - 10, "font-size": 12, fill: "var(--noise)", "font-weight": 600 }, `${n} games → ${(rel * 100).toFixed(0)}% signal`));
+    $("nread").innerHTML = `n = <b>${n}</b>`;
+    const need = t => (k * t / (1 - t)).toFixed(0);
+    $("relCap").innerHTML = `k = ${k}: after ${n} games the data gets weight ${rel.toFixed(2)} and the prior ${(1 - rel).toFixed(2)}. Games needed for 50 / 70 / 90% signal: ${need(.5)} / ${need(.7)} / ${need(.9)}.`;
+  }
+  ksel.addEventListener("change", drawRel); $("nslider").addEventListener("input", drawRel); drawRel();
+
+  // ---------- split-half grid ----------
+  (function () {
+    const g = $("splitGrid"); let seed = 7;
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    for (let r = 0; r < 12; r++) { const row = []; for (let c = 0; c < 41; c++) row.push(c);
+      for (let c = 0; c < 41; c++) { const a = rnd() < .5; g.appendChild(el("rect", { x: 110 + c * 7, y: 30 + r * 10, width: 6, height: 8, fill: a ? "var(--accent)" : "var(--noise)", opacity: .85 })); }
+    }
+    g.appendChild(el("text", { x: 110, y: 160, "font-size": 11, fill: "var(--muted)" }, "… 30 rows; each row's games shuffled independently"));
+  })();
+
+  // ---------- 3. in/out curves ----------
+  (function () {
+    const svg = $("curveChart"); const L = 50, R = 700, T = 20, B = 250;
+    const x = g => L + (g - 1) / 81 * (R - L), y = r => B - r * (B - T);
+    [0, .25, .5, .75, 1].forEach(r => { svg.appendChild(el("line", { x1: L, x2: R, y1: y(r), y2: y(r), stroke: r === .5 ? "var(--fg)" : "var(--line)", "stroke-width": r === .5 ? 1.2 : 1, "stroke-dasharray": r === .5 ? "4 3" : "" })); svg.appendChild(el("text", { x: L - 8, y: y(r) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, r.toFixed(2))); });
+    [1, 10, 16, 20, 30, 41, 50, 60, 70, 82].forEach(g => svg.appendChild(el("text", { x: x(g), y: B + 16, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, g)));
+    svg.appendChild(el("text", { x: L - 8, y: T - 6, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, "r²"));
+    svg.appendChild(el("text", { x: R, y: B + 34, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, "games played (N)"));
+    const path = (arr, color) => { let d = ""; CURVE_N.forEach((n, i) => d += (i ? "L" : "M") + x(n).toFixed(1) + "," + y(arr[i] ** 2).toFixed(1)); svg.appendChild(el("path", { d, fill: "none", stroke: color, "stroke-width": 2.5 })); };
+    path(R_IN, "var(--noise)"); path(R_OUT, "var(--accent)");
+    svg.appendChild(el("text", { x: x(60), y: y(.93), "font-size": 12, fill: "var(--noise)", "font-weight": 600, "text-anchor": "end" }, "in-sample: vs final season"));
+    svg.appendChild(el("text", { x: x(60), y: y(.47), "font-size": 12, fill: "var(--accent)", "font-weight": 600, "text-anchor": "end" }, "out-of-sample: vs remaining games"));
+    [[10, R_IN[9] ** 2, "var(--noise)", "N_in = 10"], [16, R_OUT[15] ** 2, "var(--accent)", "N_out = 16"]].forEach(([n, v, c, lab]) => {
+      svg.appendChild(el("circle", { cx: x(n), cy: y(v), r: 5, fill: c, stroke: "var(--surface)", "stroke-width": 2 }));
+      svg.appendChild(el("text", { x: x(n) + 8, y: y(v) + (c.includes("noise") ? -8 : 16), "font-size": 12, fill: c, "font-weight": 600 }, lab));
+    });
+    svg.appendChild(el("text", { x: R, y: y(.5) - 5, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, "Narsu's threshold"));
+  })();
+  function ceil() { const k = +$("kceil").value; const c = (41 / (41 + k)) ** 2; $("ceilread").innerHTML = `k = <b>${k}</b> → r²<sub>max</sub> = (41/(41+${k}))² = <b>${c.toFixed(2)}</b> ${c > .5 ? "· N_out exists" : "· N_out never reached"}`; }
+  $("kceil").addEventListener("input", ceil); ceil();
+
+  // ---------- 4. stat table ----------
+  (function () {
+    const tb = $("statTable").querySelector("tbody");
+    STATS.forEach(([name, k, nin, nout, narsu]) => {
+      const rel = 7 / (7 + k);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${name}</td><td>${k}</td><td><span class="bar" style="width:${(rel * 90).toFixed(0)}px"></span>${rel.toFixed(2)}</td><td>${nin}</td><td class="${nout == null ? "dash" : ""}">${nout == null ? "—" : nout}</td><td>${narsu}</td>`;
+      tb.appendChild(tr);
+    });
+  })();
+
+  // ---------- 5. priors ----------
+  function priors(last) {
+    return [
+      { name: "league mean", mu: 0, tau: P.sigT, K: P.k },
+      { name: "last season, raw", mu: last, tau: P.sigT, K: P.k },
+      { name: "last season, regressed", mu: P.rho * last, tau: P.tau, K: P.K },
+    ];
+  }
+  function drawPriors() {
+    const t = $("team").value, n = +$("pn").value;
+    const [, raw, last] = TEAMS[t];
+    $("pnread").innerHTML = `n = <b>${n}</b> (actual: ${TEAMS[t][0]})`;
+    const tb = $("priorTable").querySelector("tbody"); tb.innerHTML = "";
+    const rows = priors(last).map(p => { const w = n / (n + p.K); return { ...p, w, est: w * raw + (1 - w) * p.mu }; });
+    rows.forEach(p => { const tr = document.createElement("tr"); tr.innerHTML = `<td>${p.name}</td><td>${p.mu >= 0 ? "+" : ""}${p.mu.toFixed(1)}</td><td>${p.tau.toFixed(1)}</td><td>${p.K.toFixed(1)}</td><td>${p.w.toFixed(2)}</td><td><b>${p.est >= 0 ? "+" : ""}${p.est.toFixed(1)}</b></td>`; tb.appendChild(tr); });
+    // beam: raw on the left, prior on the right (regressed), estimate at the fulcrum
+    const g = $("beam"); g.innerHTML = "";
+    const p = rows[2]; const lo = Math.min(raw, p.mu) - 2, hi = Math.max(raw, p.mu) + 2;
+    const X = v => 60 + (v - lo) / (hi - lo) * 600;
+    g.appendChild(el("line", { x1: 60, x2: 660, y1: 70, y2: 70, stroke: "currentColor", "stroke-width": 2 }));
+    g.appendChild(el("rect", { x: X(raw) - 8, y: 70 - 16 - Math.sqrt(n) * 4, width: 16, height: Math.sqrt(n) * 4 + 16, fill: "var(--noise)", rx: 2 }));
+    g.appendChild(el("rect", { x: X(p.mu) - 8, y: 70 - 16 - Math.sqrt(p.K) * 4, width: 16, height: Math.sqrt(p.K) * 4 + 16, fill: "var(--accent)", rx: 2 }));
+    g.appendChild(el("polygon", { points: `${X(p.est)},72 ${X(p.est) - 9},92 ${X(p.est) + 9},92`, fill: "var(--fg)" }));
+    g.appendChild(el("text", { x: X(raw), y: 110, "font-size": 12, fill: "var(--noise)", "text-anchor": "middle", "font-weight": 600 }, `this season ${raw > 0 ? "+" : ""}${raw} (n = ${n})`));
+    g.appendChild(el("text", { x: X(p.mu), y: 110, "font-size": 12, fill: "var(--accent)", "text-anchor": "middle", "font-weight": 600 }, `regressed prior ${p.mu > 0 ? "+" : ""}${p.mu.toFixed(1)} (K = ${p.K.toFixed(0)})`));
+    g.appendChild(el("text", { x: X(p.est), y: 24, "font-size": 13, fill: "var(--fg)", "text-anchor": "middle", "font-weight": 600 }, `estimate ${p.est > 0 ? "+" : ""}${p.est.toFixed(1)}`));
+    $("beamCap").textContent = `${t}: the fulcrum sits ${(p.w * 100).toFixed(0)}% of the way from the prior toward this season's value, because n/(n+K) = ${n}/(${n}+${p.K.toFixed(0)}). Drag the games slider below to watch it move.`;
+  }
+  $("team").addEventListener("change", drawPriors); $("pn").addEventListener("input", drawPriors); drawPriors();
+})();
+</script>
