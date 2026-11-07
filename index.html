@@ -1,10 +1,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Shrunk Team Ratings</title>
+<title>Is It Real? · NBA team ratings</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-  /* Layout: header + control bar, then one of three views: interval chart per stat, team card, sortable table. */
+  /* Layout: header + control bar, then one of four views: interval chart per stat, funnel plot, team card, sortable table. */
   :root {
     --bg: #f6f3ec;
     --surface: #fffdf8;
@@ -72,12 +72,17 @@
   .row-hit { cursor: pointer; outline: none; }
   .row-hit:focus-visible rect.bg { stroke: var(--accent); stroke-width: 2; }
   .row-hit.sel rect.bg { fill: var(--accent-soft); }
+  /* funnel plot */
+  #funnel { width: 100%; display: block; }
+  #funnel text { font-family: var(--body); }
+  .pt { cursor: pointer; outline: none; }
+  .pt:focus-visible circle.dot { stroke: var(--accent); stroke-width: 3; }
   /* details of the hovered / selected team: stays in view at the bottom of the window */
-  #status { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center;
+  .status { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center;
             margin: 6px -12px -10px; padding: 8px 12px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px;
             background: var(--surface); font-size: 13px; min-height: 1.4em; color: var(--fg); font-variant-numeric: tabular-nums; }
-  #status .open { font: inherit; font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
-  #status .open:hover { background: var(--accent); color: var(--surface); }
+  .status .open { font: inherit; font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
+  .status .open:hover { background: var(--accent); color: var(--surface); }
   /* team card */
   .card-head { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
   .card-head h2 { font-family: var(--display); font-size: 30px; margin: 0; }
@@ -95,7 +100,7 @@
   .chip.hi { background: var(--accent-soft); color: var(--fg); }
   .mini { width: 100%; height: 26px; display: block; }
   @media (max-width: 620px) {
-    #status { font-size: 12px; line-height: 1.3; padding: 6px 12px; }
+    .status { font-size: 12px; line-height: 1.3; padding: 6px 12px; }
     .tc { grid-template-columns: minmax(80px, 1fr) 96px 78px; }
     .tc .plotcell { grid-column: 1 / -1; padding-top: 0; }
     .tc .hd.plotcell { display: none; }
@@ -121,13 +126,14 @@
 
 <main>
   <header>
-    <h1>Shrunk Team Ratings</h1>
+    <h1>Is it real?</h1>
     <span class="sub" id="subtitle"></span>
     <a class="sub" href="explainer.html">How the numbers work →</a>
   </header>
 
   <nav class="tabs" aria-label="Views">
     <a href="#bystat" data-view="bystat">By stat</a>
+    <a href="#funnel" data-view="funnel">Funnel</a>
     <a href="#byteam" data-view="byteam">By team</a>
     <a href="#table" data-view="table">Table</a>
   </nav>
@@ -135,9 +141,9 @@
   <div class="controls">
     <div class="ctl" id="statCtl"><span>Stat</span><button type="button" class="step" data-step="-1" aria-label="Previous stat">‹</button><select id="stat" aria-label="Stat"></select><button type="button" class="step" data-step="1" aria-label="Next stat">›</button></div>
     <div class="ctl" id="teamCtl" hidden><span>Team</span><button type="button" class="step" data-step="-1" aria-label="Previous team">‹</button><select id="team" aria-label="Team"></select><button type="button" class="step" data-step="1" aria-label="Next team">›</button></div>
-    <div class="ctl"><span>Model</span><div class="seg" id="modelSeg" role="group" aria-label="Model"></div></div>
-    <div class="ctl"><span>Prior</span><div class="seg" id="priorSeg" role="group" aria-label="Prior"></div></div>
-    <label class="chk"><input type="checkbox" id="band2" checked> show 95% range</label>
+    <div class="ctl" id="modelCtl"><span>Model</span><div class="seg" id="modelSeg" role="group" aria-label="Model"></div></div>
+    <div class="ctl" id="priorCtl"><span>Prior</span><div class="seg" id="priorSeg" role="group" aria-label="Prior"></div></div>
+    <label class="chk" id="band2Ctl"><input type="checkbox" id="band2" checked> show 95% range</label>
   </div>
   <p class="note" id="modelNote"></p>
   <p class="note" id="priorNote"></p>
@@ -146,7 +152,16 @@
   <section id="v-bystat" class="panel">
     <div class="legend" id="legend"></div>
     <svg id="forest" role="img" aria-label="Estimated true level and its uncertainty range for every team in the chosen stat."></svg>
-    <div id="status" aria-live="polite"></div>
+    <div id="status" class="status" aria-live="polite"></div>
+  </section>
+
+  <!-- ===== funnel ===== -->
+  <section id="v-funnel" class="panel" hidden>
+    <p class="note" id="fsummary" style="margin:0 0 6px"></p>
+    <div class="legend" id="legend3"></div>
+    <svg id="funnel" role="img"></svg>
+    <div id="fstatus" class="status" aria-live="polite"></div>
+    <p class="note" style="margin-top:8px">If a team were exactly league average, its raw value after n games would fall inside the dark band 95% of the time and inside the light band 99.8% of the time, from game-to-game noise alone. The bands narrow as 1/√n. A team outside them is very unlikely to be average. A team inside them is not shown to be average: the games so far cannot yet separate it from average. The funnel uses no prior; the By stat view combines these numbers with a prior.</p>
   </section>
 
   <!-- ===== by team ===== -->
@@ -372,6 +387,113 @@
     box.append(b, t, btn);
   }
 
+  // ---------- view: funnel ----------
+  const Z95 = 1.96, Z998 = 3.09;
+  function drawFunnel() {
+    const st = S(), svg = $("funnel"), m = st.league_mean, se = n => st.noise_sd / Math.sqrt(n);
+    const rows = st.rows.filter(r => r.raw != null && r.g > 0);
+    const zOf = r => (r.raw - m) / se(r.g);
+    const out95 = rows.filter(r => Math.abs(zOf(r)) > Z95).length, out998 = rows.filter(r => Math.abs(zOf(r)) > Z998).length;
+    const N = rows.length, read = out95 >= Math.max(3, 3 * 0.05 * N) ? "Many more than chance: the spread between teams is already real for this stat."
+      : out95 <= Math.max(1, 0.05 * N * 1.5) ? "About what chance gives: so far the spread between teams is mostly noise."
+      : "More than chance, but only a few teams separate from average.";
+    $("fsummary").innerHTML = `<b>${st.name}</b>: <b>${out95} of ${N}</b> teams ${out95 === 1 ? "is" : "are"} outside the 95% noise band (about ${(0.05 * N).toFixed(1)} if every team were average), ` +
+      `<b>${out998}</b> outside the 99.8% band (about ${(0.002 * N).toFixed(2)}). ${read} Single-game noise σ<sub>e</sub> = ${fmtSd(st.noise_sd, st)}${unitWord(st)}; k = ${fmtK(st.k, 1)} games.`;
+    const W = Math.max(320, svg.parentElement.clientWidth - 24), narrow = W < 560;
+    const H = narrow ? 340 : 420, left = narrow ? 46 : 58, right = narrow ? 40 : 56, top = 12, bottom = 36;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H); svg.innerHTML = "";
+    if (st.noise_sd == null || !rows.length) { svg.appendChild(el("text", { x: 8, y: 20, fill: "var(--muted)", "font-size": 13 }, "No noise estimate for this stat.")); return; }
+    // x: games on a square-root scale (the band width is linear in 1/√n); y: raw value
+    const NMAX = 82, X = n => left + (Math.sqrt(n) - 1) / (Math.sqrt(NMAX) - 1) * (W - left - right);
+    const gMin = Math.min(...rows.map(r => r.g));
+    let span = Z998 * se(gMin) * 1.1;
+    rows.forEach(r => { span = Math.max(span, Math.abs(r.raw - m) * 1.12); });
+    const lo = m - span, hi = m + span, Y = v => top + (hi - v) / (hi - lo) * (H - top - bottom);
+    const k = isPct(st) ? 100 : 1;
+    // grid and axes
+    niceTicks(lo * k, hi * k, narrow ? 5 : 7).forEach(t => {
+      const v = t / k;
+      svg.appendChild(el("line", { x1: left, x2: W - right, y1: Y(v), y2: Y(v), stroke: "var(--line)", "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: left - 6, y: Y(v) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, (signedStat(st) && t > 0 ? "+" : "") + t + (isPct(st) ? "%" : "")));
+    });
+    [1, 5, 10, 20, 41, 82].forEach(n => {
+      svg.appendChild(el("line", { x1: X(n), x2: X(n), y1: top, y2: H - bottom, stroke: "var(--line)", "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: X(n), y: H - bottom + 15, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, n));
+    });
+    svg.appendChild(el("text", { x: (left + W - right) / 2, y: H - 4, "font-size": 11.5, fill: "var(--muted)", "text-anchor": "middle" }, "games played (square-root scale)"));
+    // noise bands, clipped to the plot area
+    const clipId = "fclip";
+    const defs = el("defs", {}), cp = el("clipPath", { id: clipId });
+    cp.appendChild(el("rect", { x: left, y: top, width: W - left - right, height: H - top - bottom })); defs.appendChild(cp); svg.appendChild(defs);
+    const band = z => {
+      const up = [], dn = [];
+      for (let i = 0; i <= 120; i++) { const n = Math.pow(1 + i / 120 * (Math.sqrt(NMAX) - 1), 2); up.push(`${X(n).toFixed(1)},${Y(m + z * se(n)).toFixed(1)}`); dn.unshift(`${X(n).toFixed(1)},${Y(m - z * se(n)).toFixed(1)}`); }
+      return up.concat(dn).join(" ");
+    };
+    const gBands = el("g", { "clip-path": `url(#${clipId})`, "pointer-events": "none" });
+    gBands.appendChild(el("polygon", { points: band(Z998), fill: "var(--accent-soft)", opacity: .45 }));
+    gBands.appendChild(el("polygon", { points: band(Z95), fill: "var(--accent-soft)", opacity: 1 }));
+    gBands.appendChild(el("line", { x1: left, x2: W - right, y1: Y(m), y2: Y(m), stroke: "var(--fg)", "stroke-dasharray": "3 3", "stroke-width": 1 }));
+    svg.appendChild(gBands);
+    // points: inside the 95% band hollow, outside filled (good / bad, or accent for style stats)
+    const color = r => { const z = zOf(r); if (Math.abs(z) <= Z95) return null; return st.style ? "var(--accent)" : z * better(st) > 0 ? "var(--good)" : "var(--bad)"; };
+    const order = rows.slice().sort((a, b) => Math.abs(zOf(a)) - Math.abs(zOf(b)));  // outliers drawn last, on top
+    const labels = [];
+    order.forEach(r => {
+      const z = zOf(r), c = color(r), cx = X(r.g), cy = Y(r.raw), sel = r.team === state.team;
+      const g = el("g", { class: "pt", tabindex: 0, role: "button", "data-team": r.team,
+                          "aria-label": `${r.team}: raw ${fmt(r.raw, st)} after ${r.g} games, ${Math.abs(z).toFixed(1)} noise SDs ${z * better(st) > 0 ? "better" : "worse"} than average${Math.abs(z) > Z95 ? ", outside the 95% band" : ""}. Enter opens the team card.` });
+      g.appendChild(el("circle", { cx, cy, r: 11, fill: "transparent" }));  // larger touch target
+      if (sel) g.appendChild(el("circle", { cx, cy, r: 9, fill: "none", stroke: "var(--fg)", "stroke-width": 1.5 }));
+      g.appendChild(el("circle", { class: "dot", cx, cy, r: 5, fill: c || "var(--surface)", stroke: c || "var(--muted)", "stroke-width": 1.5 }));
+      const open = () => { state.team = r.team; go("byteam"); };
+      g.addEventListener("mouseenter", () => showFunnelStatus(st, r)); g.addEventListener("focus", () => showFunnelStatus(st, r));
+      g.addEventListener("pointerdown", ev => { lastPointer = ev.pointerType; });
+      g.addEventListener("click", () => { if (lastPointer === "mouse" || state.team === r.team) open(); else { state.team = r.team; save(); drawFunnel(); } lastPointer = "mouse"; });
+      g.addEventListener("keydown", ev => { if (ev.key === "Enter") open(); else if (ev.key === " ") { ev.preventDefault(); state.team = r.team; save(); drawFunnel(); } });
+      svg.appendChild(g);
+      if (c || sel) labels.push({ team: r.team, x: cx, y: cy, c: c || "var(--fg)" });
+    });
+    // labels in one column right of the points (teams have similar game counts), pushed
+    // apart vertically, with a leader line to each point
+    const lx = Math.max(...rows.map(r => X(r.g))) + 22;
+    labels.sort((a, b) => a.y - b.y);
+    labels.forEach((l, i) => { l.ly = i ? Math.max(l.y, labels[i - 1].ly + 13) : l.y; });
+    const over = labels.length ? labels[labels.length - 1].ly - (H - bottom - 4) : 0;  // keep the column inside the plot
+    if (over > 0) labels.forEach(l => { l.ly -= over; });
+    labels.forEach(l => {
+      svg.appendChild(el("line", { x1: l.x + 6, y1: l.y, x2: lx - 3, y2: l.ly, stroke: l.c, "stroke-width": 1, opacity: .6, "pointer-events": "none" }));
+      svg.appendChild(el("text", { x: lx, y: l.ly + 4, "font-size": 12.5, "font-weight": 600, "font-family": "var(--display)", fill: l.c, "pointer-events": "none" }, l.team));
+    });
+    svg.onmouseleave = () => showFunnelStatus(st);
+    svg.setAttribute("aria-label", `${st.name}: funnel plot of each team's raw value against games played, with 95% and 99.8% noise bands around the league average. ${out95} teams are outside the 95% band.`);
+    showFunnelStatus(st);
+  }
+  function showFunnelStatus(st, r) {
+    const box = $("fstatus");
+    if (!r) r = st.rows.find(x => x.team === state.team && x.raw != null);
+    if (!r) { box.textContent = "Hover over or tap a team to see how far it is from average, in noise units. Click (or tap again) to open its card."; return; }
+    const sdn = st.noise_sd / Math.sqrt(r.g), z = (r.raw - st.league_mean) / sdn, a = Math.abs(z);
+    box.innerHTML = "";
+    const b = document.createElement("b"); b.textContent = r.team;
+    const t = document.createElement("span");
+    const where = a > Z998 ? "outside the 99.8% band" : a > Z95 ? "outside the 95% band" : "inside the 95% band";
+    t.textContent = `${r.g} games · raw ${fmt(r.raw, st)} · league avg ${fmt(st.league_mean, st, { plain: true })} · gap ${fmt(r.raw - st.league_mean, st, { signed: true })}${unitWord(st)}` +
+      ` = ${a.toFixed(1)} noise SDs (± ${fmtSd(sdn, st)} per SD at ${r.g} games) → ${where}`;
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "open"; btn.textContent = `${r.team} card →`;
+    btn.addEventListener("click", () => { state.team = r.team; go("byteam"); });
+    box.append(b, t, btn);
+  }
+  function legendFunnel() {
+    const sw = (inner, w = 34) => `<svg width="${w}" height="14" aria-hidden="true">${inner}</svg>`;
+    $("legend3").innerHTML =
+      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)"/>')} 95% noise band</span>` +
+      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)" opacity=".45"/>')} 99.8% noise band</span>` +
+      `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--fg)" stroke-dasharray="3 3"/>')} league avg this season</span>` +
+      `<span>${sw('<circle cx="17" cy="7" r="4.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.5"/>')} inside 95% band</span>` +
+      `<span>${sw('<circle cx="10" cy="7" r="4.5" fill="var(--good)"/><circle cx="24" cy="7" r="4.5" fill="var(--bad)"/>')} outside: better / worse</span>`;
+  }
+
   // ---------- view: by team ----------
   function drawTeam() {
     const team = state.team && DATA.teams.includes(state.team) ? state.team : sortedRows(DATA.stats[0])[0].team;
@@ -473,16 +595,18 @@
   }
 
   // ---------- routing ----------
-  const VIEWS = ["bystat", "byteam", "table"];
+  const VIEWS = ["bystat", "funnel", "byteam", "table"];
   function render() {
     VIEWS.forEach(v => { $("v-" + v).hidden = v !== state.view; });
     document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.view === state.view ? "page" : "false"));
     $("statCtl").hidden = state.view === "byteam"; $("teamCtl").hidden = state.view !== "byteam";
+    const funnel = state.view === "funnel";  // raw data only: model and prior do not apply
+    ["modelCtl", "priorCtl", "band2Ctl", "modelNote", "priorNote"].forEach(id => { $(id).hidden = funnel; });
     $("stat").value = state.stat; $("band2").checked = state.band2;
     document.querySelectorAll("#priorSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.prior === state.prior ? "true" : "false"));
     document.querySelectorAll("#modelSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.model === state.model ? "true" : "false"));
-    modelNote(); priorNote(); legend("legend"); legend("legend2");
-    if (state.view === "bystat") drawForest(); else if (state.view === "byteam") drawTeam(); else drawTable();
+    modelNote(); priorNote(); legend("legend"); legend("legend2"); legendFunnel();
+    if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
     save();
   }
   function go(view) { state.view = view; if (location.hash !== "#" + view) location.hash = view; render(); window.scrollTo({ top: 0 }); }
