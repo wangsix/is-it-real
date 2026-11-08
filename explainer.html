@@ -1,95 +1,99 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Signal, Noise and k · Is It Real?</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   /* Layout: a long-form explainer; each section = a plain-language summary, then one claim, one figure, one control. */
   :root {
-    --bg: #f6f3ec;
-    --surface: #fffdf8;
-    --fg: #1d1a16;
-    --muted: #6b655b;
-    --line: #ddd6c8;
-    --accent: #0f6e6e;       /* signal */
-    --accent-soft: #d9ecea;
-    --noise: #b8652c;        /* noise, the opposing idea */
-    --noise-soft: #f3e2d3;
+    --bg: #f5f2eb;
+    --surface: #fffdf9;
+    --fg: #1b1813;
+    --muted: #5d574d;
+    --line: #e2dbcd;
+    --line-strong: #cfc6b5;  /* control borders */
+    --accent: #0e6b6b;       /* signal */
+    --accent-soft: #e0eeeb;
+    --noise: #b5561f;        /* noise, the opposing idea */
+    --noise-soft: #f5e3d6;
+    --neutral-soft: #ebe6db;
     --cjk: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     --display: "Barlow Condensed", "Arial Narrow", var(--cjk);
+    --label: "Barlow Semi Condensed", "Barlow Condensed", "Arial Narrow", var(--cjk);   /* small headings, table headers */
     --body: "IBM Plex Sans", system-ui, var(--cjk);
     --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #15181a; --surface: #1d2124; --fg: #ece7dd; --muted: #a39d92; --line: #343a3e;
-      --accent: #5fc2bd; --accent-soft: #1f3b3a; --noise: #e59a5c; --noise-soft: #3d2c1e; color-scheme: dark;
+      --bg: #121518; --surface: #1a1e22; --fg: #ece8df; --muted: #aaa398; --line: #2c3237; --line-strong: #3d454b;
+      --accent: #62c4be; --accent-soft: #1d3533; --noise: #f0a066; --noise-soft: #3d2c1e; --neutral-soft: #272c30; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #15181a; --surface: #1d2124; --fg: #ece7dd; --muted: #a39d92; --line: #343a3e;
-    --accent: #5fc2bd; --accent-soft: #1f3b3a; --noise: #e59a5c; --noise-soft: #3d2c1e; color-scheme: dark;
+    --bg: #121518; --surface: #1a1e22; --fg: #ece8df; --muted: #aaa398; --line: #2c3237; --line-strong: #3d454b;
+    --accent: #62c4be; --accent-soft: #1d3533; --noise: #f0a066; --noise-soft: #3d2c1e; --neutral-soft: #272c30; color-scheme: dark;
   }
   /* language: every piece of text exists twice; only the chosen one is shown */
   main:not(.zh) [lang="zh-Hant"], main.zh [lang="en"] { display: none !important; }
-  body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.55;
          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
          padding-block: 24px 60px; }
   main { max-width: 860px; margin: 0 auto; display: grid; gap: 44px; }
-  main.zh { line-height: 1.7; }
+  main.zh { line-height: 1.75; }
   h1 { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1.05; margin: 0 0 6px; text-wrap: balance; }
   h2 { font-family: var(--display); font-weight: 600; font-size: 28px; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
-  h3 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: .02em; margin: 0 0 4px; }
+  h3 { font-family: var(--label); font-weight: 600; font-size: 19px; letter-spacing: .01em; margin: 0 0 4px; }
   p { max-width: 66ch; margin: 0 0 10px; }
-  a { color: var(--accent); }
-  .lede { font-size: 17px; color: var(--muted); max-width: 60ch; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .lede { font-size: 18px; color: var(--muted); max-width: 60ch; }
   .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; flex: none; }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; flex: none; }
   .seg button { font: 600 12px/1 var(--body); padding: 6px 12px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; }
-  .seg button + button { border-left: 1px solid var(--line); }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+  .seg button + button { border-left: 1px solid var(--line-strong); }
+  .seg button[aria-pressed="true"] { background: var(--neutral-soft); color: var(--fg); }   /* language switch: a utility, kept quiet */
   section { display: grid; gap: 12px; }
   .short { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; font-size: 16px; max-width: none; margin: 0; }
   .short b:first-child { color: var(--accent); margin-right: 4px; }
   .tldr { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
   .tldr ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 6px; max-width: 70ch; }
-  .tldr .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .tldr .note { font-size: 14px; color: var(--muted); margin: 10px 0 0; }
   figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
   figure svg { width: 100%; height: auto; display: block; font-family: var(--body); }
-  figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; max-width: 70ch; }
+  figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 70ch; }
   .formula { font-family: var(--mono); font-size: 15px; background: var(--surface); border-left: 3px solid var(--accent); padding: 8px 12px; overflow-x: auto; white-space: nowrap; }
   .formula b { color: var(--accent); font-weight: 500; }
   .formula i { color: var(--noise); font-style: normal; }
-  .controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 13px; }
-  .controls label { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; margin-right: 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 14px; }
+  .controls label { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; margin-right: 6px; }
   input[type=range] { accent-color: var(--accent); width: 180px; vertical-align: middle; }
-  select { font: inherit; font-size: 13px; padding: 4px 26px 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); max-width: 100%; }
+  select { font: inherit; font-size: 14px; padding: 4px 26px 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); max-width: 100%; }
   select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .readout { font-family: var(--mono); font-size: 13px; }
+  .readout { font-family: var(--mono); font-size: 14px; }
   .readout b { color: var(--accent); font-weight: 500; }
   .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; }
   .card h3 { margin-bottom: 6px; }
-  .card p { font-size: 14px; margin: 0; }
+  .card p { font-size: 15px; margin: 0; }
   .num { font-family: var(--display); font-size: 30px; font-weight: 600; color: var(--accent); line-height: 1; }
   .num.n { color: var(--noise); }
   .wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
   th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; }
-  thead th { font-family: var(--display); font-size: 14px; letter-spacing: .03em; color: var(--muted); font-weight: 600; }
+  thead th { font-family: var(--label); font-size: 14.5px; letter-spacing: .015em; color: var(--muted); font-weight: 600; }
   td .bar { display: inline-block; height: 9px; background: var(--accent); vertical-align: middle; border-radius: 2px; margin-right: 6px; }
   td.dash { color: var(--muted); }
   table.defs td { white-space: normal; text-align: left; vertical-align: top; }
   table.defs td:first-child { white-space: nowrap; font-weight: 600; }
   details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; }
-  details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 15px; }
   details[open] summary { margin-bottom: 8px; }
-  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 15px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
   code { font-family: var(--mono); font-size: 13px; }
-  .small { font-size: 13px; color: var(--muted); }
-  .steps { display: grid; gap: 6px; font-family: var(--mono); font-size: 13px; }
+  .small { font-size: 14px; color: var(--muted); }
+  .steps { display: grid; gap: 6px; font-family: var(--mono); font-size: 14px; }
   .steps div { padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
   .steps b { color: var(--accent); font-weight: 500; }
   .steps i { color: var(--noise); font-style: normal; }
@@ -140,7 +144,7 @@
       <g stroke="var(--line)" stroke-width="1">
         <line x1="40" y1="120" x2="680" y2="120"/>
       </g>
-      <g font-size="11" fill="var(--muted)" text-anchor="middle">
+      <g font-size="12" fill="var(--muted)" text-anchor="middle">
         <text x="40" y="138">−40</text><text x="200" y="138">−20</text><text x="360" y="138">0</text><text x="520" y="138">+20</text><text x="680" y="138">+40</text>
         <text x="700" y="124" text-anchor="start" lang="en">pts</text><text x="700" y="124" text-anchor="start" lang="zh-Hant">分</text>
       </g>
@@ -209,11 +213,11 @@
       <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#arr)">
         <line x1="420" y1="52" x2="462" y2="52"/><line x1="420" y1="102" x2="462" y2="102"/>
       </g>
-      <g font-size="11" fill="var(--muted)" text-anchor="end">
+      <g font-size="12" fill="var(--muted)" text-anchor="end">
         <text x="395" y="48" lang="en">per team</text><text x="395" y="48" lang="zh-Hant">每隊</text>
         <text x="395" y="98" lang="en">per team</text><text x="395" y="98" lang="zh-Hant">每隊</text>
       </g>
-      <g font-size="11" fill="var(--muted)">
+      <g font-size="12" fill="var(--muted)">
         <text x="110" y="160" lang="en">… 30 rows; each row's games shuffled independently</text>
         <text x="110" y="160" lang="zh-Hant">…… 共 30 列；每列的比賽各自獨立洗牌</text>
       </g>
@@ -501,15 +505,15 @@
     const svg = $("relChart"); svg.innerHTML = "";
     const L = 50, R = 700, T_ = 20, B = 220;
     const x = g => L + (g - 1) / 81 * (R - L), y = r => B - r * (B - T_);
-    [0, .25, .5, .7, .9, 1].forEach(r => { svg.appendChild(el("line", { x1: L, x2: R, y1: y(r), y2: y(r), stroke: "var(--line)", "stroke-width": 1 })); svg.appendChild(el("text", { x: L - 8, y: y(r) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, r.toFixed(2))); });
-    [1, 10, 20, 30, 41, 50, 60, 70, 82].forEach(g => svg.appendChild(el("text", { x: x(g), y: B + 16, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, g)));
-    svg.appendChild(el("text", { x: R, y: B + 34, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, T("games played", "已賽場數")));
-    svg.appendChild(el("text", { x: L - 8, y: T_ - 6, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, T("reliability", "信度")));
+    [0, .25, .5, .7, .9, 1].forEach(r => { svg.appendChild(el("line", { x1: L, x2: R, y1: y(r), y2: y(r), stroke: "var(--line)", "stroke-width": 1 })); svg.appendChild(el("text", { x: L - 8, y: y(r) + 4, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, r.toFixed(2))); });
+    [1, 10, 20, 30, 41, 50, 60, 70, 82].forEach(g => svg.appendChild(el("text", { x: x(g), y: B + 16, "font-size": 12, fill: "var(--muted)", "text-anchor": "middle" }, g)));
+    svg.appendChild(el("text", { x: R, y: B + 34, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, T("games played", "已賽場數")));
+    svg.appendChild(el("text", { x: L - 8, y: T_ - 6, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, T("reliability", "信度")));
     let d = "";
     for (let g = 1; g <= 82; g++) d += (g === 1 ? "M" : "L") + x(g).toFixed(1) + "," + y(g / (g + k)).toFixed(1);
     svg.appendChild(el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 2.5 }));
     // k marker
-    if (k <= 82) { svg.appendChild(el("line", { x1: x(k), x2: x(k), y1: y(.5), y2: B, stroke: "var(--accent)", "stroke-dasharray": "3 3", "stroke-width": 1 })); svg.appendChild(el("text", { x: x(k) + 4, y: B - 6, "font-size": 11, fill: "var(--accent)" }, `n = k = ${k}`)); }
+    if (k <= 82) { svg.appendChild(el("line", { x1: x(k), x2: x(k), y1: y(.5), y2: B, stroke: "var(--accent)", "stroke-dasharray": "3 3", "stroke-width": 1 })); svg.appendChild(el("text", { x: x(k) + 4, y: B - 6, "font-size": 12, fill: "var(--accent)" }, `n = k = ${k}`)); }
     const rel = n / (n + k);
     svg.appendChild(el("line", { x1: x(n), x2: x(n), y1: T_, y2: B, stroke: "var(--noise)", "stroke-width": 1 }));
     svg.appendChild(el("circle", { cx: x(n), cy: y(rel), r: 5, fill: "var(--noise)", stroke: "var(--surface)", "stroke-width": 2 }));
@@ -534,10 +538,10 @@
   function drawCurves() {
     const svg = $("curveChart"); svg.innerHTML = ""; const L = 50, R = 700, T_ = 20, B = 250;
     const x = g => L + (g - 1) / 81 * (R - L), y = r => B - r * (B - T_);
-    [0, .25, .5, .75, 1].forEach(r => { svg.appendChild(el("line", { x1: L, x2: R, y1: y(r), y2: y(r), stroke: r === .5 ? "var(--fg)" : "var(--line)", "stroke-width": r === .5 ? 1.2 : 1, "stroke-dasharray": r === .5 ? "4 3" : "" })); svg.appendChild(el("text", { x: L - 8, y: y(r) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, r.toFixed(2))); });
-    [1, 10, 16, 20, 30, 41, 50, 60, 70, 82].forEach(g => svg.appendChild(el("text", { x: x(g), y: B + 16, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, g)));
-    svg.appendChild(el("text", { x: L - 8, y: T_ - 6, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, "r²"));
-    svg.appendChild(el("text", { x: R, y: B + 34, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, T("games played (N)", "已賽場數 (N)")));
+    [0, .25, .5, .75, 1].forEach(r => { svg.appendChild(el("line", { x1: L, x2: R, y1: y(r), y2: y(r), stroke: r === .5 ? "var(--fg)" : "var(--line)", "stroke-width": r === .5 ? 1.2 : 1, "stroke-dasharray": r === .5 ? "4 3" : "" })); svg.appendChild(el("text", { x: L - 8, y: y(r) + 4, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, r.toFixed(2))); });
+    [1, 10, 16, 20, 30, 41, 50, 60, 70, 82].forEach(g => svg.appendChild(el("text", { x: x(g), y: B + 16, "font-size": 12, fill: "var(--muted)", "text-anchor": "middle" }, g)));
+    svg.appendChild(el("text", { x: L - 8, y: T_ - 6, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, "r²"));
+    svg.appendChild(el("text", { x: R, y: B + 34, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, T("games played (N)", "已賽場數 (N)")));
     const path = (arr, color) => { let d = ""; CURVE_N.forEach((n, i) => d += (i ? "L" : "M") + x(n).toFixed(1) + "," + y(arr[i] ** 2).toFixed(1)); svg.appendChild(el("path", { d, fill: "none", stroke: color, "stroke-width": 2.5 })); };
     path(R_IN, "var(--noise)"); path(R_OUT, "var(--accent)");
     svg.appendChild(el("text", { x: x(60), y: y(.93), "font-size": 12, fill: "var(--noise)", "font-weight": 600, "text-anchor": "end" }, T("in-sample: vs full season", "樣本內：對全季")));
@@ -546,7 +550,7 @@
       svg.appendChild(el("circle", { cx: x(n), cy: y(v), r: 5, fill: c, stroke: "var(--surface)", "stroke-width": 2 }));
       svg.appendChild(el("text", { x: x(n) + 8, y: y(v) + (c.includes("noise") ? -8 : 16), "font-size": 12, fill: c, "font-weight": 600 }, lab));
     });
-    svg.appendChild(el("text", { x: R, y: y(.5) - 5, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, T("Narsu's threshold", "Narsu 的門檻")));
+    svg.appendChild(el("text", { x: R, y: y(.5) - 5, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, T("Narsu's threshold", "Narsu 的門檻")));
   }
   function ceil() {
     const k = +$("kceil").value; const c = (41 / (41 + k)) ** 2;

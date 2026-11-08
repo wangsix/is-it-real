@@ -2,38 +2,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Is It Real? · NBA team ratings</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
   /* Layout: header + control bar, then one of four views: interval chart per stat, funnel plot, team card, sortable table. */
+  /* Colour roles: teal is reserved for the estimate (data); selected controls use ink (--ui-sel);
+     better / worse also carry a shape (triangle, ▲▼), not only green / red. */
   :root {
-    --bg: #f6f3ec;
-    --surface: #fffdf8;
-    --stripe: #f1ece2;
-    --fg: #1d1a16;
-    --muted: #6b655b;
-    --line: #ddd6c8;
-    --accent: #0f6e6e;        /* the estimate and its range */
-    --accent-soft: #bfdcd9;
-    --raw: #b8652c;           /* this season's raw value */
-    --good: #1a7f3c;
-    --good-soft: #d7eedc;
-    --bad: #b3362a;
-    --bad-soft: #f5dcd8;
-    --neutral-soft: #e8e3d8;
-    --display: "Barlow Condensed", "Arial Narrow", sans-serif;
-    --body: "IBM Plex Sans", system-ui, sans-serif;
+    --bg: #f5f2eb;
+    --surface: #fffdf9;
+    --stripe: #f6f2ea;
+    --fg: #1b1813;
+    --muted: #5d574d;
+    --line: #e2dbcd;
+    --line-strong: #cfc6b5;   /* control borders */
+    --accent: #0e6b6b;        /* the estimate and its range */
+    --accent-soft: #cfe5e2;
+    --raw: #b5561f;           /* this season's raw value */
+    --last: #8a8276;          /* last season's tick */
+    --good: #17663a;
+    --good-soft: #dcefe1;
+    --bad: #a8322a;
+    --bad-soft: #f7e0dc;
+    --neutral-soft: #ebe6db;
+    --ui-sel: #1b1813;        /* selected button fill */
+    --ui-sel-fg: #fffdf9;
+    --sel-row: #f1e6c9;       /* selected team's row */
+    --band95: #b8d9d4;
+    --band998: #e4efed;
+    --cjk: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --display: "Barlow Condensed", "Arial Narrow", var(--cjk);
+    --label: "Barlow Semi Condensed", "Barlow Condensed", "Arial Narrow", var(--cjk);   /* team codes, tabs, headers */
+    --body: "IBM Plex Sans", system-ui, var(--cjk);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #15181a; --surface: #1d2124; --stripe: #23282b; --fg: #ece7dd; --muted: #a39d92; --line: #343a3e;
-      --accent: #5fc2bd; --accent-soft: #2a4d4b; --raw: #e59a5c;
-      --good: #58c47a; --good-soft: #1e3a26; --bad: #ef7f73; --bad-soft: #43231f; --neutral-soft: #2c3134; color-scheme: dark;
+      --bg: #121518; --surface: #1a1e22; --stripe: #1f2428; --fg: #ece8df; --muted: #aaa398; --line: #2c3237; --line-strong: #3d454b;
+      --accent: #62c4be; --accent-soft: #24403f; --raw: #f0a066; --last: #8f8a80;
+      --good: #6fcf8e; --good-soft: #1b3324; --bad: #f08a7e; --bad-soft: #3d221f; --neutral-soft: #272c30;
+      --ui-sel: #ece8df; --ui-sel-fg: #121518; --sel-row: #3a3320; --band95: #2d5653; --band998: #1f3331; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #15181a; --surface: #1d2124; --stripe: #23282b; --fg: #ece7dd; --muted: #a39d92; --line: #343a3e;
-    --accent: #5fc2bd; --accent-soft: #2a4d4b; --raw: #e59a5c;
-    --good: #58c47a; --good-soft: #1e3a26; --bad: #ef7f73; --bad-soft: #43231f; --neutral-soft: #2c3134; color-scheme: dark;
+    --bg: #121518; --surface: #1a1e22; --stripe: #1f2428; --fg: #ece8df; --muted: #aaa398; --line: #2c3237; --line-strong: #3d454b;
+    --accent: #62c4be; --accent-soft: #24403f; --raw: #f0a066; --last: #8f8a80;
+    --good: #6fcf8e; --good-soft: #1b3324; --bad: #f08a7e; --bad-soft: #3d221f; --neutral-soft: #272c30;
+    --ui-sel: #ece8df; --ui-sel-fg: #121518; --sel-row: #3a3320; --band95: #2d5653; --band998: #1f3331; color-scheme: dark;
   }
   [hidden] { display: none !important; }
   /* bilingual labels: both languages are in the DOM, stacked in one grid cell; the inactive one is
@@ -45,100 +58,106 @@
   main:not([data-lang="zh"]) .bi > [lang="zh-Hant"], main[data-lang="zh"] .bi > [lang="en"] { visibility: hidden; }
   .seg button .bi, button.toggle .bi, nav.tabs .bi { justify-items: center; }
   .langseg button { font-size: 12px; padding: 3px 9px; }
+  /* theme / language are utilities: quieter than the Model / Prior choices */
+  .seg.langseg button[aria-pressed="true"] { background: var(--neutral-soft); color: var(--fg); font-weight: 600; }
   .prefs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.4;
+  body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45;
          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
          padding-block: 20px 40px; }
-  main { max-width: 1040px; margin: 0 auto; display: grid; gap: 14px; }
+  main { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }   /* minmax: a wide table scrolls inside .wrap instead of widening the page */
   header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; }
   h1 { font-family: var(--display); font-weight: 700; font-size: 34px; margin: 0; letter-spacing: .01em; }
-  .sub { color: var(--muted); font-size: 13px; }
+  .sub { color: var(--muted); font-size: 14px; }
   nav.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
-  nav.tabs a { font-family: var(--display); font-size: 17px; font-weight: 600; letter-spacing: .03em; color: var(--muted);
+  nav.tabs a { font-family: var(--label); font-size: 17px; font-weight: 600; letter-spacing: .015em; color: var(--muted);
                text-decoration: none; padding: 6px 12px; border-bottom: 3px solid transparent; margin-bottom: -1px; }
-  nav.tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); }
+  nav.tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--ui-sel); }
   nav.tabs a:hover { color: var(--fg); }
   .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
   .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
   .seg button { white-space: nowrap; }
-  .ctl > span { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .step { font: inherit; font-size: 15px; line-height: 1; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); cursor: pointer; }
+  .ctl > span { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .step { font: inherit; font-size: 15px; line-height: 1; width: 30px; height: 30px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); cursor: pointer; }
   .step:hover { border-color: var(--muted); }
-  select { font: inherit; font-size: 14px; padding: 5px 26px 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  select { font: inherit; font-size: 14px; padding: 5px 26px 5px 9px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
   .seg button { font: inherit; font-size: 13px; padding: 5px 10px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; }
-  .seg button + button { border-left: 1px solid var(--line); }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+  .seg button + button { border-left: 1px solid var(--line-strong); }
+  .seg button[aria-pressed="true"] { background: var(--ui-sel); color: var(--ui-sel-fg); }
   .seg button:disabled { opacity: .45; cursor: not-allowed; }
-  button.toggle { font: inherit; font-size: 13px; padding: 4px 10px 4px 26px; border: 1px solid var(--line); border-radius: 6px;
+  button.toggle { font: inherit; font-size: 13px; padding: 4px 10px 4px 26px; border: 1px solid var(--line-strong); border-radius: 6px;
                   background: var(--surface); color: var(--muted); cursor: pointer; position: relative; }
   button.toggle::before { content: ""; position: absolute; left: 8px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
                           border-radius: 50%; border: 1.5px solid var(--muted); box-sizing: border-box; }
-  button.toggle[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
-  button.toggle[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+  button.toggle[aria-pressed="true"] { color: var(--fg); border-color: var(--ui-sel); }
+  button.toggle[aria-pressed="true"]::before { background: var(--ui-sel); border-color: var(--ui-sel); }
   label.chk { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
   input[type=checkbox] { accent-color: var(--accent); }
   :is(select, button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .note { color: var(--muted); font-size: 12.5px; max-width: 90ch; }
+  .note { color: var(--muted); font-size: 13.5px; max-width: 90ch; }
   .note b { color: var(--fg); font-weight: 600; }
   /* one-line summary; its height is reserved for the longest variant so the chart below never moves */
-  .summary { margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .summary { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
   .summary b { color: var(--fg); font-weight: 600; }
   .summary .sep { color: var(--line); padding: 0 6px; }
-  a.howlink { color: var(--accent); font-size: 13px; text-decoration: none; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a.howlink { color: var(--accent); font-size: 14px; text-decoration: none; }
   a.howlink:hover { text-decoration: underline; }
   header a.howlink { margin-left: auto; }
   button.info { font: 600 11px/1 var(--body); width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted);
                 background: transparent; color: var(--muted); cursor: pointer; padding: 0; font-style: italic; font-family: Georgia, serif; }
   button.info:hover, button.info[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
   .pop { position: absolute; z-index: 10; width: min(440px, calc(100vw - 32px)); background: var(--surface); color: var(--fg);
-         border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+         border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45;
          box-shadow: 0 6px 24px rgba(0,0,0,.18); }
-  .pop h3 { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .03em; margin: 0 0 6px; }
+  .pop h3 { font-family: var(--label); font-size: 17px; font-weight: 600; letter-spacing: .015em; margin: 0 0 6px; }
   .pop dl { margin: 0; display: grid; gap: 6px; }
   .pop dt { font-weight: 600; }
   .pop dd { margin: 0; color: var(--muted); }
-  .pop .cur dt::after { content: var(--sel-label, " · selected"); color: var(--accent); font-weight: 400; font-size: 11.5px; }
-  .pop .cur { border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -11px; }
+  .pop .cur dt::after { content: var(--sel-label, " · selected"); color: var(--accent); font-weight: 400; font-size: 12px; }
+  .pop .cur { border-left: 3px solid var(--ui-sel); padding-left: 8px; margin-left: -11px; }
   .pop p { margin: 6px 0 0; color: var(--muted); }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--muted); align-items: center; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); align-items: center; }
   .legend svg { vertical-align: middle; }
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
   #forest { width: 100%; display: block; }
   #forest text, .mini text { font-family: var(--body); }
   .row-hit { cursor: pointer; outline: none; }
   .row-hit:focus-visible rect.bg { stroke: var(--accent); stroke-width: 2; }
-  .row-hit.sel rect.bg { fill: var(--accent-soft); }
+  .row-hit.sel rect.bg { fill: var(--sel-row); }
   /* funnel plot */
   #funnel { width: 100%; display: block; }
   #funnel text { font-family: var(--body); }
   .pt { cursor: pointer; outline: none; }
-  .pt:focus-visible circle.dot { stroke: var(--accent); stroke-width: 3; }
+  .pt:focus-visible .dot { stroke: var(--accent); stroke-width: 3; }
   /* details of the hovered / selected team: stays in view at the bottom of the window */
   .status { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center;
             margin: 6px -12px -10px; padding: 8px 12px; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px;
-            background: var(--surface); font-size: 13px; min-height: 1.4em; color: var(--fg); font-variant-numeric: tabular-nums; }
-  .status .open { font: inherit; font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
+            background: var(--surface); font-size: 14px; min-height: 1.4em; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .status .open { font: inherit; font-size: 13px; padding: 3px 10px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
   .status .open:hover { background: var(--accent); color: var(--surface); }
   /* team card */
   .card-head { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
   .card-head h2 { font-family: var(--display); font-size: 30px; margin: 0; }
-  .tc { display: grid; grid-template-columns: minmax(92px, 130px) minmax(0, 1fr) 118px 84px; gap: 0 12px; align-items: center; }
+  .tc { display: grid; grid-template-columns: minmax(92px, 130px) minmax(0, 1fr) 118px max-content; gap: 0 12px; align-items: center; }
   .tc > div { padding: 5px 0; border-bottom: 1px solid var(--line); min-width: 0; }
-  .tc .hd { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .tc .stat { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .02em; cursor: pointer; }
-  .tc .stat small { font-family: var(--body); font-size: 11px; color: var(--muted); font-weight: 400; display: block; letter-spacing: 0; }
+  .tc .hd { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .tc .stat { font-family: var(--label); font-size: 16px; font-weight: 600; letter-spacing: .01em; cursor: pointer; }
+  .tc .stat small { font-family: var(--body); font-size: 12px; color: var(--muted); font-weight: 400; display: block; letter-spacing: 0; }
   .tc .val { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .tc .val small { color: var(--muted); display: block; font-size: 11.5px; }
-  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .tc .val small { color: var(--muted); display: block; font-size: 12px; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .chip.good { background: var(--good-soft); color: var(--good); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); }
   .chip.neutral { background: var(--neutral-soft); color: var(--muted); }
+  .chip.good::before { content: "▲ "; font-size: .75em; vertical-align: .1em; }
+  .chip.bad::before { content: "▼ "; font-size: .75em; vertical-align: .1em; }
   .chip.hi { background: var(--accent-soft); color: var(--fg); }
   .mini { width: 100%; height: 26px; display: block; }
   @media (max-width: 620px) {
-    .status { font-size: 12px; line-height: 1.3; padding: 6px 12px; }
-    .tc { grid-template-columns: minmax(80px, 1fr) 96px 78px; }
+    .status { font-size: 13px; line-height: 1.35; padding: 6px 12px; }
+    .tc { grid-template-columns: minmax(80px, 1fr) 96px max-content; grid-auto-flow: row dense; }   /* dense: value + chip stay beside the stat name, the plot drops below */
+    .tc .val small { white-space: normal; }
     .tc .plotcell { grid-column: 1 / -1; padding-top: 0; }
     .tc .hd.plotcell { display: none; }
   }
@@ -147,16 +166,16 @@
   table { border-collapse: collapse; width: 100%; min-width: 900px; font-variant-numeric: tabular-nums; }
   th, td { padding: 6px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
   th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
-  thead th { font-family: var(--display); font-size: 14px; font-weight: 600; letter-spacing: .03em; color: var(--muted); cursor: pointer; user-select: none; }
+  thead th { font-family: var(--label); font-size: 14px; font-weight: 600; letter-spacing: .015em; color: var(--muted); cursor: pointer; user-select: none; }
   thead tr.grp th { cursor: default; color: var(--fg); text-align: center; border-bottom: 0; padding-bottom: 0; }
-  thead th[aria-sort] { color: var(--accent); }
+  thead th[aria-sort] { color: var(--fg); }
   thead th[aria-sort="ascending"]::after { content: " ▲"; } thead th[aria-sort="descending"]::after { content: " ▼"; }
   tbody tr:nth-child(even) td { background: var(--stripe); }
-  td.team { font-family: var(--display); font-size: 16px; font-weight: 600; cursor: pointer; }
-  td.rk, td.sd { color: var(--muted); font-size: 12px; }
+  td.team { font-family: var(--label); font-size: 16px; font-weight: 600; cursor: pointer; }
+  td.rk, td.sd { color: var(--muted); font-size: 12.5px; }
   td.pos { color: var(--good); } td.neg { color: var(--bad); }
   td.sel { font-weight: 600; }
-  tbody tr.me td { background: var(--accent-soft); }
+  tbody tr.me td { background: var(--sel-row); }
   td.team:focus-visible { outline-offset: -2px; }
   @media (prefers-reduced-motion: no-preference) { .seg button, nav.tabs a { transition: background .15s, color .15s; } }
 </style>
@@ -360,7 +379,7 @@
       (state.band2 ? `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--accent)" stroke-width="2" opacity=".4"/>')} ${B("95% range", "95% 區間")}</span>` : "") +
       `<span>${sw('<rect x="14" y="1" width="5" height="12" fill="var(--fg)" />', 34)} ${B("estimate", "估計值")}</span>` +
       `<span>${sw('<circle cx="17" cy="7" r="4" fill="none" stroke="var(--raw)" stroke-width="2"/>')} ${B("this season raw", "本季原始值")}</span>` +
-      `<span>${sw('<line x1="17" y1="2" x2="17" y2="12" stroke="var(--muted)" stroke-width="2"/>')} ${B("last season", "上季")}</span>` +
+      `<span>${sw('<line x1="17" y1="2" x2="17" y2="12" stroke="var(--last)" stroke-width="2"/>')} ${B("last season", "上季")}</span>` +
       `<span>${sw('<line x1="17" y1="0" x2="17" y2="14" stroke="var(--fg)" stroke-dasharray="2 2"/>')} ${B("league avg, same model", "聯盟平均（同模型）")}</span>`;
   }
 
@@ -545,23 +564,23 @@
     niceTicks(isPct(st) ? lo * 100 : lo, isPct(st) ? hi * 100 : hi, narrow ? 4 : 7).forEach(t => {
       const v = isPct(st) ? t / 100 : t;
       svg.appendChild(el("line", { x1: X(v), x2: X(v), y1: top - 4, y2: H - 6, stroke: "var(--line)", "stroke-width": 1 }));
-      svg.appendChild(el("text", { x: X(v), y: top - 10, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, (signedStat(st) && t > 0 ? "+" : "") + t + (isPct(st) ? "%" : "")));
+      svg.appendChild(el("text", { x: X(v), y: top - 10, "font-size": 12, fill: "var(--muted)", "text-anchor": "middle" }, (signedStat(st) && t > 0 ? "+" : "") + t + (isPct(st) ? "%" : "")));
     });
-    svg.appendChild(el("text", { x: W - 4, y: top - 10, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, narrow ? T("est ± SD", "估計 ± SD") : T("estimate ± SD", "估計值 ± SD")));
+    svg.appendChild(el("text", { x: W - 4, y: top - 10, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, narrow ? T("est ± SD", "估計 ± SD") : T("estimate ± SD", "估計值 ± SD")));
     rows.forEach((r, i) => {
       const y = top + i * rowH, cy = y + rowH / 2, e = est(r), s = sd(r);
       const rk = rankOf.get(r.team), moved = !state.autosort && rk !== i + 1;
       const g = el("g", { class: "row-hit" + (r.team === state.team ? " sel" : ""), tabindex: 0, role: "button", "data-team": r.team,
                           "aria-label": T(`${rk}. ${r.team}: estimate ${fmt(e, st)} ± ${fmtSd(s, st)}. Enter opens the team card.`, `第 ${rk} 名 ${r.team}：估計 ${fmt(e, st)} ± ${fmtSd(s, st)}。按 Enter 開啟球隊卡。`) });
       g.appendChild(el("rect", { class: "bg", x: 0, y, width: W, height: rowH, fill: i % 2 ? "var(--stripe)" : "transparent" }));
-      g.appendChild(el("text", { x: 4, y: cy + 4, "font-size": 11, fill: moved ? "var(--accent)" : "var(--muted)", "font-weight": moved ? 600 : 400 }, rk));
-      g.appendChild(el("text", { x: narrow ? 22 : 28, y: cy + 5, "font-size": 14, "font-weight": 600, fill: "var(--fg)", "font-family": "var(--display)" }, r.team));
+      g.appendChild(el("text", { x: 4, y: cy + 4, "font-size": 12, fill: moved ? "var(--accent)" : "var(--muted)", "font-weight": moved ? 600 : 400 }, rk));
+      g.appendChild(el("text", { x: narrow ? 22 : 28, y: cy + 5, "font-size": narrow ? 14 : 15, "font-weight": 600, fill: "var(--fg)", style: "font-family: var(--label)" }, r.team));
       if (state.band2) g.appendChild(el("line", { x1: X(e - 2 * s), x2: X(e + 2 * s), y1: cy, y2: cy, stroke: "var(--accent)", "stroke-width": 2, opacity: .4 }));
       g.appendChild(el("rect", { x: X(e - s), y: cy - 5, width: Math.max(1, X(e + s) - X(e - s)), height: 10, rx: 2, fill: "var(--accent)", opacity: .85 }));
-      if (r.last != null) g.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--muted)", "stroke-width": 2 }));
+      if (r.last != null) g.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--last)", "stroke-width": 2 }));
       g.appendChild(el("circle", { cx: X(r.raw), cy, r: 4, fill: "var(--surface)", stroke: "var(--raw)", "stroke-width": 2 }));
       g.appendChild(el("rect", { x: X(e) - 2.5, y: cy - 7, width: 5, height: 14, fill: "var(--fg)", stroke: "var(--surface)", "stroke-width": 1 }));
-      g.appendChild(el("text", { x: W - 4, y: cy + 4, "font-size": 12, fill: "var(--fg)", "text-anchor": "end", "font-variant-numeric": "tabular-nums" }, `${fmt(e, st)} ± ${fmtSd(s, st)}`));
+      g.appendChild(el("text", { x: W - 4, y: cy + 4, "font-size": 13, fill: "var(--fg)", "text-anchor": "end", "font-variant-numeric": "tabular-nums" }, `${fmt(e, st)} ± ${fmtSd(s, st)}`));
       const open = () => { state.team = r.team; go("byteam"); };
       g.addEventListener("mouseenter", () => showStatus(st, r, rk)); g.addEventListener("focus", () => showStatus(st, r, rk));
       g.addEventListener("pointerdown", ev => { lastPointer = ev.pointerType; });
@@ -647,13 +666,13 @@
     niceTicks(lo * k, hi * k, narrow ? 5 : 7).forEach(t => {
       const v = t / k;
       svg.appendChild(el("line", { x1: left, x2: W - right, y1: Y(v), y2: Y(v), stroke: "var(--line)", "stroke-width": 1 }));
-      svg.appendChild(el("text", { x: left - 6, y: Y(v) + 4, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, (signedStat(st) && t > 0 ? "+" : "") + t + (isPct(st) ? "%" : "")));
+      svg.appendChild(el("text", { x: left - 6, y: Y(v) + 4, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, (signedStat(st) && t > 0 ? "+" : "") + t + (isPct(st) ? "%" : "")));
     });
     [1, 5, 10, 20, 41, 82].forEach(n => {
       svg.appendChild(el("line", { x1: X(n), x2: X(n), y1: top, y2: H - bottom, stroke: "var(--line)", "stroke-width": 1 }));
-      svg.appendChild(el("text", { x: X(n), y: H - bottom + 15, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, n));
+      svg.appendChild(el("text", { x: X(n), y: H - bottom + 15, "font-size": 12, fill: "var(--muted)", "text-anchor": "middle" }, n));
     });
-    svg.appendChild(el("text", { x: (left + W - right) / 2, y: H - 4, "font-size": 11.5, fill: "var(--muted)", "text-anchor": "middle" }, T("games played (square-root scale)", "已賽場數（平方根刻度）")));
+    svg.appendChild(el("text", { x: (left + W - right) / 2, y: H - 4, "font-size": 12.5, fill: "var(--muted)", "text-anchor": "middle" }, T("games played (square-root scale)", "已賽場數（平方根刻度）")));
     // noise bands, clipped to the plot area
     const clipId = "fclip";
     const defs = el("defs", {}), cp = el("clipPath", { id: clipId });
@@ -664,11 +683,12 @@
       return up.concat(dn).join(" ");
     };
     const gBands = el("g", { "clip-path": `url(#${clipId})`, "pointer-events": "none" });
-    gBands.appendChild(el("polygon", { points: band(Z998), fill: "var(--accent-soft)", opacity: .45 }));
-    gBands.appendChild(el("polygon", { points: band(Z95), fill: "var(--accent-soft)", opacity: 1 }));
+    gBands.appendChild(el("polygon", { points: band(Z998), fill: "var(--band998)" }));
+    gBands.appendChild(el("polygon", { points: band(Z95), fill: "var(--band95)" }));
     gBands.appendChild(el("line", { x1: left, x2: W - right, y1: Y(m), y2: Y(m), stroke: "var(--fg)", "stroke-dasharray": "3 3", "stroke-width": 1 }));
     svg.appendChild(gBands);
-    // points: inside the 95% band hollow, outside filled (good / bad, or accent for style stats)
+    // points: inside the 95% band hollow, outside filled (good / bad, or accent for style stats);
+    // better / worse are also triangles (▲ / ▼) so they do not depend on telling green from red
     const color = r => { const z = zOf(r); if (Math.abs(z) <= Z95) return null; return st.style ? "var(--accent)" : z * better(st) > 0 ? "var(--good)" : "var(--bad)"; };
     const order = rows.slice().sort((a, b) => Math.abs(zOf(a)) - Math.abs(zOf(b)));  // outliers drawn last, on top
     const labels = [];
@@ -680,7 +700,9 @@
                                           `${r.team}：${r.g} 場後本季 ${fmt(r.raw, st)}，${dir}平均 ${Math.abs(z).toFixed(1)} 個雜訊標準差${out ? "，在 95% 帶外" : ""}。按 Enter 開啟球隊卡。`) });
       g.appendChild(el("circle", { cx, cy, r: 11, fill: "transparent" }));  // larger touch target
       if (sel) g.appendChild(el("circle", { cx, cy, r: 9, fill: "none", stroke: "var(--fg)", "stroke-width": 1.5 }));
-      g.appendChild(el("circle", { class: "dot", cx, cy, r: 5, fill: c || "var(--surface)", stroke: c || "var(--muted)", "stroke-width": 1.5 }));
+      const tri = c && !st.style ? (z * better(st) > 0 ? -1 : 1) : 0;   // -1 = ▲ better, 1 = ▼ worse
+      g.appendChild(tri ? el("path", { class: "dot", d: `M${cx},${cy + 6.5 * tri} L${cx + 6.5},${cy - 4.5 * tri} L${cx - 6.5},${cy - 4.5 * tri} Z`, fill: c, stroke: c, "stroke-width": 1, "stroke-linejoin": "round" })
+                        : el("circle", { class: "dot", cx, cy, r: 5, fill: c || "var(--surface)", stroke: c || "var(--muted)", "stroke-width": 1.5 }));
       const open = () => { state.team = r.team; go("byteam"); };
       g.addEventListener("mouseenter", () => showFunnelStatus(st, r)); g.addEventListener("focus", () => showFunnelStatus(st, r));
       g.addEventListener("pointerdown", ev => { lastPointer = ev.pointerType; });
@@ -698,7 +720,7 @@
     if (over > 0) labels.forEach(l => { l.ly -= over; });
     labels.forEach(l => {
       svg.appendChild(el("line", { x1: l.x + 6, y1: l.y, x2: lx - 3, y2: l.ly, stroke: l.c, "stroke-width": 1, opacity: .6, "pointer-events": "none" }));
-      svg.appendChild(el("text", { x: lx, y: l.ly + 4, "font-size": 12.5, "font-weight": 600, "font-family": "var(--display)", fill: l.c, "pointer-events": "none" }, l.team));
+      svg.appendChild(el("text", { x: lx, y: l.ly + 4, "font-size": 13, "font-weight": 600, style: "font-family: var(--label)", fill: l.c, "pointer-events": "none" }, l.team));
     });
     svg.onmouseleave = () => showFunnelStatus(st);
     svg.setAttribute("aria-label", T(`${st.name}: funnel plot of each team's raw value against games played, with 95% and 99.8% noise bands around the league average. ${out95} teams are outside the 95% band.`,
@@ -723,11 +745,11 @@
   function legendFunnel() {
     const sw = (inner, w = 34) => `<svg width="${w}" height="14" aria-hidden="true">${inner}</svg>`;
     $("legend3").innerHTML =
-      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)"/>')} ${B("95% noise band", "95% 雜訊帶")}</span>` +
-      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)" opacity=".45"/>')} ${B("99.8% noise band", "99.8% 雜訊帶")}</span>` +
+      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--band95)"/>')} ${B("95% noise band", "95% 雜訊帶")}</span>` +
+      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--band998)"/>')} ${B("99.8% noise band", "99.8% 雜訊帶")}</span>` +
       `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--fg)" stroke-dasharray="3 3"/>')} ${B("league avg this season", "本季聯盟平均")}</span>` +
       `<span>${sw('<circle cx="17" cy="7" r="4.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.5"/>')} ${B("inside 95% band", "在 95% 帶內")}</span>` +
-      `<span>${sw('<circle cx="10" cy="7" r="4.5" fill="var(--good)"/><circle cx="24" cy="7" r="4.5" fill="var(--bad)"/>')} ${B("outside: better / worse", "帶外：較好／較差")}</span>`;
+      `<span>${sw('<path d="M10,1.5 L15.5,11 L4.5,11 Z" fill="var(--good)"/><path d="M24,12.5 L29.5,3 L18.5,3 Z" fill="var(--bad)"/>')} ${B("outside: better / worse", "帶外：較好／較差")}</span>`;
   }
 
   // ---------- view: by team ----------
@@ -773,7 +795,7 @@
     if (state.band2) svg.appendChild(el("line", { x1: X(e - 2 * s), x2: X(e + 2 * s), y1: cy, y2: cy, stroke: "var(--accent)", "stroke-width": 2, opacity: .45 }));
     svg.appendChild(el("rect", { x: X(e - s), y: cy - 5, width: Math.max(1, X(e + s) - X(e - s)), height: 10, rx: 2, fill: "var(--accent)", opacity: .85 }));
     svg.appendChild(el("line", { x1: X(baseline(st)), x2: X(baseline(st)), y1: 1, y2: H - 1, stroke: "var(--fg)", "stroke-dasharray": "2 2" }));
-    if (r.last != null) svg.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--muted)", "stroke-width": 2 }));
+    if (r.last != null) svg.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--last)", "stroke-width": 2 }));
     svg.appendChild(el("circle", { cx: X(r.raw), cy, r: 3.5, fill: "var(--surface)", stroke: "var(--raw)", "stroke-width": 2 }));
     svg.appendChild(el("rect", { x: X(e) - 2, y: cy - 7, width: 4, height: 14, fill: "var(--fg)" }));
   }
