@@ -165,7 +165,7 @@
   <header>
     <h1><span class="bi"><span lang="en">Is it real?</span><span lang="zh-Hant">是真的嗎？</span></span></h1>
     <span class="sub" id="subtitle"></span>
-    <a class="howlink" id="howLink" href="explainer.html" target="_blank" rel="noopener"><span class="bi"><span lang="en">How it works ↗</span><span lang="zh-Hant">方法說明（英文）↗</span></span></a>
+    <a class="howlink" id="howLink" href="explainer.html" target="_blank" rel="noopener"><span class="bi"><span lang="en">How it works ↗</span><span lang="zh-Hant">方法說明 ↗</span></span></a>
     <div class="prefs">
       <div class="seg langseg" id="themeSeg" role="group" aria-label="Theme / 外觀"><button type="button" data-theme-pick="auto"><span aria-hidden="true">◐</span> <span class="bi"><span lang="en">Auto</span><span lang="zh-Hant">自動</span></span></button><button type="button" data-theme-pick="light"><span aria-hidden="true">☀</span> <span class="bi"><span lang="en">Light</span><span lang="zh-Hant">淺色</span></span></button><button type="button" data-theme-pick="dark"><span aria-hidden="true">☾</span> <span class="bi"><span lang="en">Dark</span><span lang="zh-Hant">深色</span></span></button></div>
       <div class="seg langseg" id="langSeg" role="group" aria-label="Language / 語言"><button type="button" data-lang="en" lang="en">EN</button><button type="button" data-lang="zh" lang="zh-Hant">中文</button></div>
@@ -310,8 +310,8 @@
   DATA.teams.forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; $("team").appendChild(o); });
   MODELS.forEach(([k]) => { const b = document.createElement("button"); b.type = "button"; b.dataset.model = k; b.innerHTML = MLB(k); if (k === "full" && !DATA.has_full) b.disabled = true; $("modelSeg").appendChild(b); });
   priorNames.forEach(nm => { const b = document.createElement("button"); b.type = "button"; b.dataset.prior = nm; b.innerHTML = PLB(nm); $("priorSeg").appendChild(b); });
-  $("srcNote").innerHTML = `<span lang="en">Source: Basketball-Reference box scores; k and σ<sub>e</sub> from ${seasonSpan(DATA.k_seasons, false)}. Each stat keeps one x-axis across models and priors, so a range that moves really moved. Method, definitions and back-tests: <a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">how it works</a>.</span>` +
-    `<span lang="zh-Hant">資料來源：Basketball-Reference 逐場數據；k 與 σ<sub>e</sub> 取自 ${seasonSpan(DATA.k_seasons, true)} 球季。每項數據在不同模型與先驗之間使用同一條 x 軸，所以區間移動就是真的移動。方法、定義與回測：<a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">方法說明（英文）</a>。</span>`;
+  $("srcNote").innerHTML = `<span lang="en">Data: box scores from <a href="https://www.basketball-reference.com/" target="_blank" rel="noopener">Basketball-Reference.com</a> (Sports Reference LLC); k and σ<sub>e</sub> from ${seasonSpan(DATA.k_seasons, false)}. Each stat keeps one x-axis across models and priors, so a range that moves really moved. Method, definitions and back-tests: <a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">how it works</a>. Not affiliated with the NBA.</span>` +
+    `<span lang="zh-Hant">資料來源：<a href="https://www.basketball-reference.com/" target="_blank" rel="noopener">Basketball-Reference.com</a>（Sports Reference LLC）逐場數據；k 與 σ<sub>e</sub> 取自 ${seasonSpan(DATA.k_seasons, true)} 球季。每項數據在不同模型與先驗之間使用同一條 x 軸，所以區間移動就是真的移動。方法、定義與回測：<a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">方法說明</a>。本站與 NBA 無關。</span>`;
 
   const S = () => DATA.stats[state.stat];
   const hasFull = st => st.beta != null;
@@ -427,11 +427,30 @@
     Object.assign(state, keep);
     box.style.minHeight = hmax + "px";
   }
+  // One-line definitions (team versions, as computed by the package; wording follows the Basketball-Reference glossary)
+  const STAT_DEF = {
+    "Net Rtg": ["Points scored minus points allowed, per 100 possessions.", "每 100 回合的得分減失分。"],
+    "Off Rtg": ["Points scored per 100 possessions.", "每 100 回合得分。"],
+    "Def Rtg": ["Points allowed per 100 possessions. Lower is better.", "每 100 回合失分。越低越好。"],
+    "Pace": ["Possessions per 48 minutes. A style stat: neither better nor worse.", "每 48 分鐘的回合數。風格數據，沒有好壞之分。"],
+    "3PAr": ["Share of shots that are threes (3PA ÷ FGA). A style stat.", "出手中三分球的比例（3PA ÷ FGA）。風格數據。"],
+    "Opp. 3PAr": ["Share of opponents' shots that are threes. A style stat.", "對手出手中三分球的比例。風格數據。"],
+    "FTR": ["Free-throw attempts per shot (FTA ÷ FGA). A style stat.", "每次投籃出手的罰球數（FTA ÷ FGA）。風格數據。"],
+    "AST%": ["Share of made baskets that were assisted. A style stat.", "進球中有助攻的比例。風格數據。"],
+    "EFG%": ["Shooting percentage with a made three worth 1.5 twos: (FG + 0.5 × 3P) ÷ FGA.", "三分球命中以 1.5 倍計算的命中率：(FG + 0.5 × 3P) ÷ FGA。"],
+    "Opp. EFG%": ["Opponents' effective shooting percentage. Lower is better.", "對手的有效命中率。越低越好。"],
+    "TOV%": ["Turnovers per play: TOV ÷ (FGA + 0.44 × FTA + TOV). Lower is better.", "每次進攻機會的失誤率：TOV ÷ (FGA + 0.44 × FTA + TOV)。越低越好。"],
+    "Opp. TOV%": ["Opponents' turnovers per play: turnovers forced.", "對手每次進攻機會的失誤率，也就是逼出的失誤。"],
+    "ORB%": ["Share of the team's own misses it rebounds.", "搶回己方投籃不進的比例。"],
+    "DRB%": ["Share of opponents' misses the team rebounds.", "搶下對手投籃不進的比例。"],
+    "3PT%": ["Three-point makes ÷ attempts.", "三分球命中 ÷ 出手。"],
+    "Opp. 3PT%": ["Opponents' three-point percentage. Lower is better, but it is mostly luck within a season.", "對手三分命中率。越低越好，但在一季之內大多是運氣。"],
+  };
   function popHTML(kind) {
     const st = S(), item = (cur, dt, dd) => `<div class="${cur ? "cur" : ""}"><dt>${dt}</dt><dd>${dd}</dd></div>`;
     const lm = fmt(st.league_mean, st, { plain: true }), ll = fmt(st.league_mean_last, st, { plain: true });
-    if (kind === "stat") return `<h3>${st.name}</h3><dl>` +
-      item(false, T(`k = ${fmtK(st.k, 1)} games`, `k = ${fmtK(st.k, 1)} 場`), T(`Noise variance ÷ true-talent variance. After k games the stat is half signal, half noise (reliability n/(n+k) = 0.5).`, `雜訊變異 ÷ 真實實力變異。打滿 k 場後，這項數據一半是訊號、一半是雜訊（信度 n/(n+k) = 0.5）。`)) +
+    if (kind === "stat") return `<h3>${st.name}</h3>${STAT_DEF[st.name] ? `<p>${T(...STAT_DEF[st.name])}</p>` : ""}<dl>` +
+      item(false, T(`k = ${fmtK(st.k, 1)} games`, `k = ${fmtK(st.k, 1)} 場`), T(`After k games this stat is half signal, half noise; the smaller k, the sooner it can be trusted. Formally k = noise variance ÷ variance of true levels, and reliability after n games = n/(n+k).`, `打滿 k 場後，這項數據一半是訊號、一半是雜訊；k 越小，越早可以相信。正式定義：k = 雜訊變異 ÷ 真實水準變異，n 場後的信度 = n/(n+k)。`)) +
       item(false, T(`single-game noise σ<sub>e</sub> = `, `單場雜訊 σ<sub>e</sub> = `) + fmtSd(st.noise_sd, st) + unitWord(st), T(`How much one game's value scatters around the team's true level.`, `單場數值圍繞球隊真實水準的離散程度。`)) +
       item(false, T(`spread of true levels σ<sub>T</sub> = `, `真實水準差距 σ<sub>T</sub> = `) + fmtSd(st.true_sd, st) + unitWord(st), T(`How far apart teams really are. k = (σ<sub>e</sub>/σ<sub>T</sub>)².`, `球隊之間實際差多少。k = (σ<sub>e</sub>/σ<sub>T</sub>)²。`)) +
       item(false, T(`league average ${lm}`, `聯盟平均 ${lm}`), T(`This season's mean of the 30 teams (last season ${ll}). The dashed line and the better/worse chips use it.`, `本季 30 隊的平均（上季 ${ll}）。虛線與較好／較差標籤以此為準。`)) +
@@ -483,7 +502,7 @@
   const refreshPop = () => { if (pop.kind) { $("pop").innerHTML = popHTML(pop.kind); placePop(); } };
   // explainer.html is next to index.html; the single-file build (data inlined) has no such file
   const EXPLAINER = INLINE ? "https://claude.ai/artifact/EFjwZa4phhtrLgaZqVXpQD" : "explainer.html";
-  $("howLink").href = EXPLAINER; document.querySelectorAll("a.xl").forEach(a => { a.href = EXPLAINER; });
+  const setExplainerLinks = () => { const u = EXPLAINER + (ZH() ? "?lang=zh" : "?lang=en"); $("howLink").href = u; document.querySelectorAll("a.xl").forEach(a => { a.href = u; }); };
 
   // ---------- scales ----------
   // One x-range per stat, covering every model, prior and the 95% range, so switching
@@ -820,6 +839,7 @@
     const m = document.querySelector("main");
     m.dataset.lang = state.lang; m.lang = ZH() ? "zh-Hant" : "en";
     m.style.setProperty("--sel-label", ZH() ? '" · 目前選擇"' : '" · selected"');
+    setExplainerLinks();
     document.querySelectorAll("#langSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === state.lang ? "true" : "false"));
     $("autosort").title = T("On: teams re-rank whenever the model, prior or stat changes. Off: the order is frozen, so you can watch each range move.",
                             "開：切換模型、先驗或數據時重新排名。關：固定順序，方便觀察每個區間如何移動。");

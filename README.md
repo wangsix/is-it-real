@@ -10,7 +10,7 @@ Planned home: repository `wangsix/is-it-real`, served by GitHub Pages at
 | file | what it is |
 |---|---|
 | `index.html` | the rank page (By stat, Funnel, By team, Table).  Loads `data/ratings.json` |
-| `explainer.html` | static walk-through of the method (numbers are written in by hand) |
+| `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
 | `build.py` | makes one self-contained file with the data inlined (stdlib only) |
 | `data/ratings.json` | generated; not in git |
 | `dist/` | generated; not in git |
