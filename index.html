@@ -177,6 +177,42 @@
   td.sel { font-weight: 600; }
   tbody tr.me td { background: var(--sel-row); }
   td.team:focus-visible { outline-offset: -2px; }
+  /* overview: the plain-language front page, written from the data on every load */
+  .ov { display: grid; gap: 18px; }
+  .ov h2 { font-family: var(--display); font-size: 30px; line-height: 1.1; margin: 0; }
+  .ov h3 { font-family: var(--label); font-size: 19px; font-weight: 600; letter-spacing: .01em; margin: 0 0 4px; }
+  .ov .lede { margin: 6px 0 0; color: var(--muted); font-size: 15.5px; max-width: 70ch; }
+  .ov .hint { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; max-width: 80ch; }
+  .meters { display: grid; gap: 7px; }
+  .meter { display: grid; grid-template-columns: minmax(0, 220px) minmax(60px, 1fr) minmax(0, 210px); gap: 12px; align-items: center; font-size: 14px; }
+  .meter .bar { height: 9px; background: var(--neutral-soft); border-radius: 5px; overflow: hidden; }
+  .meter .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+  .meter .pc { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .meter .pc b { color: var(--fg); font-weight: 600; }
+  .scards { display: grid; gap: 10px; }
+  .scard { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 16px; align-items: center; padding: 10px 12px;
+           background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .scard .who b { font-family: var(--label); font-size: 22px; font-weight: 600; display: block; line-height: 1.1; }
+  .scard .who span { font-size: 12.5px; color: var(--muted); }
+  .scard svg { width: 100%; height: 34px; display: block; }
+  .scard p { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+  .scard p b { color: var(--fg); font-weight: 600; }
+  .scard .chip { margin-left: 6px; vertical-align: 1px; }
+  .ov .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .ov .btn { font: inherit; font-size: 14px; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
+  .ov .btn:hover { background: var(--accent); color: var(--surface); }
+  .ov .legend { margin-bottom: 8px; }
+  @media (max-width: 620px) {
+    .ov h2 { font-size: 26px; }
+    nav.tabs { overflow-x: auto; scrollbar-width: none; }
+    nav.tabs a { font-size: 15.5px; padding: 6px 8px; white-space: nowrap; }
+    .meter { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; }
+    .meter .bar { grid-column: 1 / -1; grid-row: 2; }
+    .meter .pc { text-align: right; }
+    .scard { grid-template-columns: minmax(0, 1fr); }
+    .scard .who { display: flex; gap: 8px; align-items: baseline; }
+    .scard .who b { display: inline; }
+  }
   @media (prefers-reduced-motion: no-preference) { .seg button, nav.tabs a { transition: background .15s, color .15s; } }
 </style>
 
@@ -192,13 +228,23 @@
   </header>
 
   <nav class="tabs" aria-label="Views">
+    <a href="#overview" data-view="overview"><span class="bi"><span lang="en">Overview</span><span lang="zh-Hant">總覽</span></span></a>
     <a href="#bystat" data-view="bystat"><span class="bi"><span lang="en">By stat</span><span lang="zh-Hant">依數據</span></span></a>
     <a href="#funnel" data-view="funnel"><span class="bi"><span lang="en">Funnel</span><span lang="zh-Hant">漏斗圖</span></span></a>
     <a href="#byteam" data-view="byteam"><span class="bi"><span lang="en">By team</span><span lang="zh-Hant">依球隊</span></span></a>
     <a href="#table" data-view="table"><span class="bi"><span lang="en">Table</span><span lang="zh-Hant">表格</span></span></a>
   </nav>
 
-  <div class="controls">
+  <!-- ===== overview ===== -->
+  <section id="v-overview" class="ov" hidden>
+    <div><h2 id="ovHead"></h2><p class="lede" id="ovLede"></p></div>
+    <div><h3 id="ovMeterHead"></h3><p class="hint" id="ovMeterHint"></p><div class="meters" id="ovMeters"></div></div>
+    <div id="ovSurprises"></div>
+    <div id="ovMine"></div>
+    <p class="note" id="ovFoot"></p>
+  </section>
+
+  <div class="controls" id="controls">
     <div class="ctl" id="statCtl"><span><span class="bi"><span lang="en">Stat</span><span lang="zh-Hant">數據</span></span></span><button type="button" class="info" data-pop="stat" aria-label="About this stat" aria-expanded="false" aria-controls="pop">i</button><button type="button" class="step" data-step="-1" aria-label="Previous stat">‹</button><select id="stat" aria-label="Stat"></select><button type="button" class="step" data-step="1" aria-label="Next stat">›</button></div>
     <div class="ctl" id="teamCtl" hidden><span><span class="bi"><span lang="en">Team</span><span lang="zh-Hant">球隊</span></span></span><button type="button" class="step" data-step="-1" aria-label="Previous team">‹</button><select id="team" aria-label="Team"></select><button type="button" class="step" data-step="1" aria-label="Next team">›</button></div>
     <div class="ctl" id="modelCtl"><span><span class="bi"><span lang="en">Model</span><span lang="zh-Hant">模型</span></span></span><button type="button" class="info" data-pop="model" aria-label="About the models" aria-expanded="false" aria-controls="pop">i</button><div class="seg" id="modelSeg" role="group" aria-label="Model"></div></div>
@@ -269,7 +315,7 @@
   const priorNames = DATA.stats[0].priors.map(p => p.name);
   const MODELS = [["season", "Season average", "季平均"], ["form", "Current form", "近況"], ["full", "Full strength", "完整戰力"]];
   const defaultLang = /^zh/i.test(navigator.language || "") ? "zh" : "en";
-  let state = { theme: "auto", lang: defaultLang, view: "bystat", model: "form", stat: 0, team: null, prior: priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1], band2: true, autosort: true, sortKey: null, sortDir: 1 };
+  let state = { theme: "auto", lang: defaultLang, view: "overview", model: "form", stat: 0, team: null, prior: priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1], band2: true, autosort: true, sortKey: null, sortDir: 1 };
   try { const s = JSON.parse(localStorage.getItem("shrunk-ratings") || "null"); if (s) state = Object.assign(state, s); } catch (e) {}
   if (!(state.stat < DATA.stats.length)) state.stat = 0;
   if (!priorNames.includes(state.prior)) state.prior = priorNames[priorNames.length - 1];
@@ -855,8 +901,141 @@
     });
   }
 
+  // ---------- view: overview ----------
+  // Every sentence here is a template filled from the data, so it stays current with each export.
+  // It always uses the Current form model and the Continuity prior (the page defaults), whatever
+  // the detailed views are set to.
+  const OV_PRIOR = priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1];
+  const OV_MIN_G = 5;          // before this many games, no team is called a surprise
+  const OV_LATE_G = 41;        // from mid-season on, the question becomes "which surprises held up?"
+  const OV_METER = [           // stat, plain English, plain Chinese
+    ["3PAr", "How many threes they take", "三分球出手比例"],
+    ["Pace", "Pace", "比賽節奏"],
+    ["Net Rtg", "Point margin (Net Rtg)", "淨效率（Net Rtg）"],
+    ["Off Rtg", "Offense (Off Rtg)", "進攻效率（Off Rtg）"],
+    ["Def Rtg", "Defense (Def Rtg)", "防守效率（Def Rtg）"],
+    ["3PT%", "Their own 3-point %", "自家三分命中率"],
+    ["Opp. 3PT%", "Opponents' 3-point %", "對手三分命中率"],
+  ];
+  const median = xs => { const s = xs.slice().sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  // One team in one stat, in overview terms: expected (prior mean), start (raw), best guess and its SD.
+  function ovTeam(st, r) {
+    const pick = sfxs => { for (const x of sfxs) if (r[OV_PRIOR + x] != null && r[OV_PRIOR + x + " sd"] != null) return [r[OV_PRIOR + x], r[OV_PRIOR + x + " sd"]]; return [null, null]; };
+    const [guess, s] = pick([" form", ""]);
+    let exp = r[OV_PRIOR + " mean"];
+    const w = r[OV_PRIOR + " w"];   // older data has no "mean" key: recover it from the season estimate
+    if (exp == null && w != null && w < 1 && r[OV_PRIOR] != null) exp = (r[OV_PRIOR] - w * r.raw) / (1 - w);
+    if (guess == null || exp == null || r.raw == null || r.raw_sd == null) return null;
+    const dir = st.lower_is_better ? -1 : 1, gap = r.raw - exp, z = gap / r.raw_sd;
+    const share = gap ? (guess - exp) / gap : 0;        // how much of the gap the best guess keeps
+    const zReal = dir * Math.sign(gap) * (guess - exp) / s;   // > 0: the true level is past the expectation, in the direction of the start
+    return { team: r.team, g: r.g, exp, raw: r.raw, guess, s, gap, z, share, zReal, hot: dir * gap > 0 };
+  }
+  // plot width inside a card at the current page width (drawn at true size, so the dots stay round)
+  const ovPlotW = () => { const w = $("v-overview").clientWidth; return Math.max(200, w <= 620 ? w - 26 : w - 112 - 16 - 26); };
+  function ovCard(st, t, kind) {
+    const [lo, hi] = domain(st), W = ovPlotW();
+    const X = v => 8 + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (W - 16);
+    const f = v => fmt(v, st), cy = 17;
+    const svg = `<svg viewBox="0 0 ${W} 34" role="img" aria-label="${t.team}: ${T(`expected ${f(t.exp)}, start ${f(t.raw)}, best guess ${f(t.guess)}`, `季前預期 ${f(t.exp)}，本季 ${f(t.raw)}，最佳估計 ${f(t.guess)}`)}">` +
+      `<line x1="8" x2="${W - 8}" y1="${cy}" y2="${cy}" stroke="var(--line-strong)"/>` +
+      `<line x1="${X(st.league_mean)}" x2="${X(st.league_mean)}" y1="5" y2="29" stroke="var(--muted)" stroke-dasharray="2 2"/>` +
+      `<rect x="${X(t.guess - t.s)}" y="${cy - 6}" width="${Math.max(1, X(t.guess + t.s) - X(t.guess - t.s))}" height="12" rx="2" fill="var(--accent-soft)"/>` +
+      `<line x1="${X(t.exp)}" x2="${X(t.raw)}" y1="${cy}" y2="${cy}" stroke="var(--raw)" stroke-width="2" opacity=".5"/>` +
+      `<line x1="${X(t.exp)}" x2="${X(t.guess)}" y1="${cy}" y2="${cy}" stroke="var(--accent)" stroke-width="3"/>` +
+      `<rect x="${X(t.exp) - 5}" y="${cy - 5}" width="10" height="10" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/>` +
+      `<circle cx="${X(t.raw)}" cy="${cy}" r="5.5" fill="var(--surface)" stroke="var(--raw)" stroke-width="2.5"/>` +
+      `<circle cx="${X(t.guess)}" cy="${cy}" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5"/></svg>`;
+    const late = t.g >= OV_LATE_G;   // past mid-season it is no longer a "start"
+    const label = kind === "early" ? T("Too early to tell", "言之過早") : kind === "flat" ? T("About as expected", "大致符合預期")
+      : t.hot ? (late ? T("Above expectation", "優於預期") : T("Hot start", "開季火熱")) : (late ? T("Below expectation", "不如預期") : T("Cold start", "開季低迷"));
+    const range = T(`likely ${f(t.guess - t.s)} to ${f(t.guess + t.s)}`, `可能介於 ${f(t.guess - t.s)} 到 ${f(t.guess + t.s)}`);
+    let txt, chip = "";
+    if (kind === "early") {
+      txt = T(`Expected <b>${f(t.exp)}</b>, playing at <b>${f(t.raw)}</b>. That is too few games to read much into yet: best guess <b>${f(t.guess)}</b> (${range}).`,
+              `季前預期 <b>${f(t.exp)}</b>，本季打出 <b>${f(t.raw)}</b>。場數還太少，看不出太多：最佳估計 <b>${f(t.guess)}</b>（${range}）。`);
+    } else if (kind === "flat") {
+      txt = T(`Expected <b>${f(t.exp)}</b>, playing at <b>${f(t.raw)}</b>: about as expected so far. Best guess <b>${f(t.guess)}</b> (${range}).`,
+              `季前預期 <b>${f(t.exp)}</b>，本季 <b>${f(t.raw)}</b>：目前大致符合預期。最佳估計 <b>${f(t.guess)}</b>（${range}）。`);
+    } else {
+      const pc = Math.round(100 * t.share);
+      const belief = t.share > 1 ? (t.hot ? T("Recent games are even better than that, so our best guess is past it", "近期比賽打得更好，所以最佳估計超過本季平均")
+                                          : T("Recent games are even worse than that, so our best guess is past it", "近期比賽打得更差，所以最佳估計超過本季平均"))
+        : pc < 5 ? T("Recent games have pulled back, so our best guess stays near the expectation", "近期比賽已經回落，所以最佳估計仍接近季前預期")
+        : T(`We believe about <b>${pc}%</b> of the gap so far: best guess`, `目前我們相信約 <b>${pc}%</b> 的差距：最佳估計`);
+      txt = T(`Expected <b>${f(t.exp)}</b>, playing at <b>${f(t.raw)}</b>. ${belief}${pc < 5 || t.share > 1 ? ":" : ""} <b>${f(t.guess)}</b> (${range}).`,
+              `季前預期 <b>${f(t.exp)}</b>，本季打出 <b>${f(t.raw)}</b>。${belief}${pc < 5 || t.share > 1 ? "：" : " "}<b>${f(t.guess)}</b>（${range}）。`);
+      const c = t.zReal >= 2 ? ["good", "very likely real", "幾乎確定是真的"] : t.zReal >= 1 ? ["good", "likely real", "可能是真的"] : ["neutral", "too early to tell", "還言之過早"];
+      if (c[0] === "good" && !t.hot) c[0] = "bad";   // a real slump is real, but not good news
+      chip = `<span class="chip ${c[0]}">${T(c[1], c[2])}</span>`;
+    }
+    return `<div class="scard"><div class="who"><b>${t.team}</b><span>${label}${T(", ", "，")}${T(`${t.g} games`, `${t.g} 場`)}</span></div>` +
+      `<div>${svg}<p>${txt}${chip}</p></div></div>`;
+  }
+  function ovLegend() {
+    const sw = inner => `<svg width="18" height="14" aria-hidden="true">${inner}</svg>`;
+    return `<div class="legend"><span>${sw('<rect x="4" y="2" width="10" height="10" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/>')} ${T("expected before the season", "季前預期")}</span>` +
+      `<span>${sw('<circle cx="9" cy="7" r="5" fill="var(--surface)" stroke="var(--raw)" stroke-width="2.5"/>')} ${T("start so far", "本季至今")}</span>` +
+      `<span>${sw('<circle cx="9" cy="7" r="5.5" fill="var(--accent)"/>')} ${T("best guess", "最佳估計")}</span>` +
+      `<span>${sw('<rect x="1" y="3" width="16" height="8" rx="2" fill="var(--accent-soft)"/>')} ${T("likely range", "可能範圍")}</span>` +
+      `<span>${sw('<line x1="9" y1="0" x2="9" y2="14" stroke="var(--muted)" stroke-dasharray="2 2"/>')} ${T("league average", "聯盟平均")}</span></div>`;
+  }
+  function drawOverview() {
+    const si = DATA.stats.findIndex(s => s.name === "Net Rtg"), st = DATA.stats[si >= 0 ? si : 0];
+    const G = Math.round(median(st.rows.map(r => r.g).filter(g => g != null)));
+    const phase = G < OV_MIN_G ? "early" : G < OV_LATE_G ? "start" : "late";
+    $("ovHead").textContent = phase === "early" ? T(`${G} games in: too early to tell`, `開季 ${G} 場：還言之過早`)
+      : phase === "start" ? T(`${G} games in: which starts are real?`, `開季 ${G} 場：哪些開季表現是真的？`)
+      : T(`${G} games in: which surprises held up?`, `已賽 ${G} 場：哪些驚奇撐住了？`);
+    $("ovLede").textContent = phase === "late"
+      ? T("By mid-season most of a team's numbers are real, but some luck remains. We still weigh this season's results against what we expected before it.",
+          "到了季中，球隊數據大多已是真實水準，但仍有些運氣成分。我們仍把本季表現和季前預期放在一起衡量。")
+      : T("Early numbers are part skill, part luck. We start from what we expected before the season and move toward this season's results as games pile up.",
+          "開季數據有實力也有運氣。我們從季前預期出發，隨著比賽累積，逐步往本季表現靠攏。");
+    // signal meter: reliability n/(n+k) at the typical number of games played
+    $("ovMeterHead").textContent = T(`How much can ${G} games tell you?`, `${G} 場比賽能說明多少？`);
+    $("ovMeterHint").textContent = T(`The share of the gaps between teams' numbers that is skill rather than luck, at ${G} games. It grows as games pile up, faster for choices (how many threes) than for results (whether they go in).`,
+                                     `打了 ${G} 場時，球隊之間數據差距中屬於實力（而非運氣）的比例。比賽越多比例越高；「選擇」（投多少三分）比「結果」（投不投得進）快得多。`);
+    $("ovMeters").innerHTML = OV_METER.map(([nm, en, zh]) => {
+      const s = DATA.stats.find(x => x.name === nm); if (!s || s.k == null) return "";
+      const p = G / (G + s.k), pc = Math.round(100 * p);
+      const word = p >= 0.6 ? T("mostly real", "大多是真的") : p >= 0.3 ? T("partly real", "部分是真的") : T("mostly luck", "大多是運氣");
+      return `<div class="meter"><span>${T(en, zh)}</span><div class="bar" role="img" aria-label="${pc}%"><i style="width:${pc}%"></i></div><span class="pc"><b>${pc}%</b> ${T("skill", "實力")} · ${word}</span></div>`;
+    }).join("");
+    // surprises: the largest gaps between the start and the pre-season expectation, in sampling-noise units
+    const all = st.rows.map(r => ovTeam(st, r)).filter(Boolean);
+    const unit = T("point margin per 100 possessions", "每 100 回合淨勝分");
+    let html = `<h3>${T(`Biggest surprises: ${unit}`, `最大驚奇：${unit}`)}</h3>`;
+    if (phase === "early") {
+      html += `<p class="hint">${T(`Surprises are listed from game ${OV_MIN_G} on. Until then, almost any start is within normal luck.`, `從第 ${OV_MIN_G} 場起列出驚奇。在那之前，幾乎任何開季表現都還在正常運氣範圍內。`)}</p>`;
+    } else {
+      const big = all.filter(t => Math.abs(t.z) >= 1);
+      const hot = big.filter(t => t.hot).sort((a, b) => Math.abs(b.z) - Math.abs(a.z)).slice(0, 3);
+      const cold = big.filter(t => !t.hot).sort((a, b) => Math.abs(b.z) - Math.abs(a.z)).slice(0, 3);
+      html += `<p class="hint">${T("Expected = last season, pulled toward the league average (less when the roster stayed together). Listed: the starts furthest from that, allowing for games played.",
+                                   "季前預期 = 上季表現往聯盟平均拉回（陣容越完整，拉回越少）。列出的是考慮已賽場數後，離預期最遠的開季表現。")}</p>` + ovLegend();
+      html += hot.length || cold.length ? `<div class="scards">${hot.concat(cold).map(t => ovCard(st, t)).join("")}</div>`
+        : `<p class="hint">${T("No team is more than normal luck away from its expectation yet.", "目前沒有球隊偏離預期超過正常運氣範圍。")}</p>`;
+    }
+    $("ovSurprises").innerHTML = html;
+    // your team
+    const team = state.team && DATA.teams.includes(state.team) ? state.team : (all[0] || {}).team;
+    const mine = all.find(t => t.team === team);
+    $("ovMine").innerHTML = `<h3>${T("Your team", "你的球隊")}</h3><div class="row" style="margin-bottom:8px"><select id="ovTeam" aria-label="${T("Team", "球隊")}">` +
+      DATA.teams.map(t => `<option${t === team ? " selected" : ""}>${t}</option>`).join("") + `</select>` +
+      `<button type="button" class="btn" id="ovCardBtn">${T("All stats for this team →", "這支球隊的全部數據 →")}</button>` +
+      `<button type="button" class="btn" id="ovAllBtn">${T(`All ${NTEAMS} teams →`, `全部 ${NTEAMS} 隊 →`)}</button></div>` +
+      (mine ? `<div class="scards">${ovCard(st, mine, phase === "early" ? "early" : Math.abs(mine.z) < 1 ? "flat" : null)}</div>` : "");
+    $("ovTeam").addEventListener("change", ev => { state.team = ev.target.value; render(); });
+    $("ovCardBtn").addEventListener("click", () => { state.team = $("ovTeam").value; go("byteam"); });
+    $("ovAllBtn").addEventListener("click", () => { state.stat = DATA.stats.indexOf(st); go("bystat"); });
+    $("ovFoot").innerHTML = T(`Best guess: the Current form model with the Continuity prior; the likely range covers the true level about 68% of the time. "We believe X%" is how far the best guess has moved from the expectation toward the start. It is lower than the skill share above because last season is known too. The other tabs show every stat, model and prior. <a class="xl" href="${EXPLAINER}" target="_blank" rel="noopener">How it works</a>.`,
+                              `最佳估計：近況模型搭配陣容延續先驗；可能範圍約有 68% 的機率涵蓋真實水準。「相信 X%」是最佳估計從季前預期往本季表現移動了多少。它比上方的實力比例低，因為我們也知道上季的表現。其他分頁有每項數據、模型與先驗。<a class="xl" href="${EXPLAINER}" target="_blank" rel="noopener">方法說明</a>。`);
+    setExplainerLinks();
+  }
+
   // ---------- routing ----------
-  const VIEWS = ["bystat", "funnel", "byteam", "table"];
+  const VIEWS = ["overview", "bystat", "funnel", "byteam", "table"];
   function applyLang() {
     const m = document.querySelector("main");
     m.dataset.lang = state.lang; m.lang = ZH() ? "zh-Hant" : "en";
@@ -876,6 +1055,8 @@
     applyLang();
     VIEWS.forEach(v => { $("v-" + v).hidden = v !== state.view; });
     document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.view === state.view ? "page" : "false"));
+    const ov = state.view === "overview";   // the overview has its own fixed settings: no control bar, no summary line
+    $("controls").hidden = ov; $("summary").hidden = ov;
     $("statCtl").hidden = state.view === "byteam"; $("teamCtl").hidden = state.view !== "byteam";
     const funnel = state.view === "funnel";  // raw data only: model and prior do not apply
     ["modelCtl", "priorCtl", "band2Ctl"].forEach(id => { $(id).hidden = funnel; });
@@ -883,8 +1064,9 @@
     $("autosort").setAttribute("aria-pressed", state.autosort ? "true" : "false"); $("autosort").hidden = state.view === "byteam" || funnel;
     document.querySelectorAll("#priorSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.prior === state.prior ? "true" : "false"));
     document.querySelectorAll("#modelSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.model === state.model ? "true" : "false"));
-    reserveSummary(); summary(); refreshPop(); legend("legend"); legend("legend2"); legendFunnel();
-    if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
+    if (ov) { closePop(); reservedW = -1; } else { reserveSummary(); summary(); refreshPop(); }   // a hidden summary measures 0: measure again when it shows
+    legend("legend"); legend("legend2"); legendFunnel();
+    if (ov) drawOverview(); else if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
     save();
   }
   function go(view) { state.view = view; if (location.hash !== "#" + view) location.hash = view; render(); window.scrollTo({ top: 0 }); }
@@ -900,7 +1082,7 @@
   // ← / → step through stats (By stat, Funnel, Table) or teams (By team) unless a form control has the focus
   document.addEventListener("keydown", ev => {
     if (ev.altKey || ev.ctrlKey || ev.metaKey || !["ArrowLeft", "ArrowRight"].includes(ev.key)) return;
-    if (ev.target.closest && ev.target.closest("select, input, textarea")) return;
+    if (state.view === "overview" || (ev.target.closest && ev.target.closest("select, input, textarea"))) return;
     const d = ev.key === "ArrowLeft" ? -1 : 1;
     if (state.view === "byteam") stepTeam(d); else stepStat(d);
   });

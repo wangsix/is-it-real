@@ -9,7 +9,7 @@ Planned home: repository `wangsix/is-it-real`, served by GitHub Pages at
 
 | file | what it is |
 |---|---|
-| `index.html` | the rank page (By stat, Funnel, By team, Table).  Loads `data/ratings.json` |
+| `index.html` | the rank page (Overview, By stat, Funnel, By team, Table).  Loads `data/ratings.json` |
 | `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
 | `build.py` | makes one self-contained file with the data inlined (stdlib only) |
 | `data/ratings.json` | generated; not in git |
@@ -40,8 +40,9 @@ strength, or null), `lower_is_better`, `style`, `q_ratio`, `beta`, `priors`
 
 Each row: `team`, `g`, `raw`, `raw_sd`, `raw_rk`, `last`, `delta`, `z`, `cont`,
 `K_cont`, `missing`, and for each prior `P`: `P`, `P sd`, `P w`, `P rk`,
-`P form`, `P form sd`, `P full`, `P full sd`.  A missing or non-finite number is
-`null`.
+`P form`, `P form sd`, `P full`, `P full sd`, `P mean` (the prior's own value, i.e. the
+pre-season expectation; the season estimate is `P w`·`raw` + (1 − `P w`)·`P mean`).  A missing
+or non-finite number is `null`.
 
 Change `SCHEMA_VERSION` in `nba_stabilization/export.py` and `SCHEMA` in
 `index.html` together when a key is removed or changes meaning.  The page shows an
@@ -58,6 +59,19 @@ error, not wrong numbers, when the versions differ.
    rule, so it tracks `data/ratings.json`.)
 
 ## Roadmap
+
+Done: **Overview** view, the default for a first visit.  Written from the data on every load, so
+it follows each `nba-stab update` with no extra step.  It always uses Current form with the
+Continuity prior and Net Rtg: a headline by season phase (before game 5 "too early to tell";
+to game 40 "which starts are real?"; from game 41 "which surprises held up?"), a signal meter
+n/(n+k) for seven stats at the median games played, up to three hot and three cold surprises
+(|raw − expected| ≥ one sampling SD, largest first), and a card for a chosen team.  Each card
+gives the expected value (`P mean`), the start, the best guess with its 68% range, the share of
+the gap the guess keeps, and a chip from (guess − expected)/SD: ≥ 2 "very likely real",
+≥ 1 "likely real", otherwise "too early to tell".  Checked on 2025-26 as of games 10, 20 and
+41: 17 of the 18 surprise cards moved past the expectation over the rest of the season in the
+direction the card said (the continuity fit includes that season, so this is not a clean
+back-test).
 
 Done: **Funnel** view.  Each team's raw value against games played (√ scale), with
 95% and 99.8% noise bands (league average ± z·σ_e/√n) and a count of teams outside
