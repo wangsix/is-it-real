@@ -567,7 +567,8 @@
   const refreshPop = () => { if (pop.kind) { $("pop").innerHTML = popHTML(pop.kind); placePop(); } };
   // explainer.html is next to index.html; the single-file build (data inlined) has no such file
   const EXPLAINER = INLINE ? "https://claude.ai/artifact/EFjwZa4phhtrLgaZqVXpQD" : "explainer.html";
-  const setExplainerLinks = () => { const u = EXPLAINER + (ZH() ? "?lang=zh" : "?lang=en"); $("howLink").href = u; document.querySelectorAll("a.xl").forEach(a => { a.href = u; }); };
+  // Same tab when explainer.html is next to this page: a claude.ai artifact cannot open its second page in a new tab.
+  const setExplainerLinks = () => { const u = EXPLAINER + (ZH() ? "?lang=zh" : "?lang=en"); [$("howLink"), ...document.querySelectorAll("a.xl")].forEach(a => { a.href = u; if (!INLINE) a.removeAttribute("target"); }); };
 
   // ---------- scales ----------
   // One x-range per stat, covering every model, prior and the 95% range, so switching
