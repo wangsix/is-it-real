@@ -374,7 +374,7 @@
   const MODEL_ABOUT_ZH = {
     season: "本季至今視為一個固定的真實水準，每場比賽權重相同。",
     form: "真實水準每場可能小幅漂移，所以近期比賽權重略高、區間較寬。2016–2025 的回測顯示，需要這樣較寬的區間，68%／95% 的涵蓋率才會準確。",
-    full: "近況模型，再把每場缺陣球員的戰力補回（球員上季 BPM × 缺陣分鐘，乘上 β）。代表這套陣容以正常輪替出賽時的水準。僅限 Net Rtg 與 Off Rtg：回測中防守 BPM 沒有可用的訊號。",
+    full: "近況模型，再把每場缺陣球員的戰力補回（球員近三季 BPM × 缺陣分鐘，乘上 β）。代表這套陣容以正常輪替出賽時的水準。僅限 Net Rtg 與 Off Rtg：回測中防守 BPM 沒有可用的訊號。",
   };
   const PRIOR_ABOUT = {
     "league mean": "Pads every team toward this season's league average with k games of it. Knows nothing about the team.",
@@ -385,7 +385,7 @@
   const MODEL_ABOUT = {
     season: "One constant true level for the season so far; every game counts the same.",
     form: "The true level may drift a little each game, so recent games count slightly more and ranges are wider. Back-testing on 2016–2025 showed the wider ranges are needed for honest 68%/95% coverage.",
-    full: "Current form after crediting each game for the talent that sat out (players' prior-season BPM × minutes missed, scaled by β). The level this roster would play at with its normal rotation. Net and Off Rtg only: defensive BPM showed no usable signal in back-tests.",
+    full: "Current form after crediting each game for the talent that sat out (players' BPM over the last three seasons × minutes missed, scaled by β). The level this roster would play at with its normal rotation. Net and Off Rtg only: defensive BPM showed no usable signal in back-tests.",
   };
   const weightRange = (st, nm) => {
     const ws = st.rows.map(r => r[nm + " w"]).filter(w => w != null);
