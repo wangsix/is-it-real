@@ -223,9 +223,48 @@
     <div class="card"><h3>League mean</h3><p>μ = 0, τ = σ<sub>T</sub>. Assumes nothing about the team. Compresses everyone toward average but keeps this season's order. The padding in the 2026-11-04 report, §3.5.</p></div>
     <div class="card"><h3>Last season, raw</h3><p>μ = last season's value, τ = σ<sub>T</sub> by choice. A half-measure: it uses last year's number but admits as much uncertainty as knowing nothing, so it gets the same K as the league prior.</p></div>
     <div class="card"><h3>Last season, regressed</h3><p>μ = 0.58 × last season, τ = 3.8. What last year actually predicts about this year, fitted on ten season pairs. Worth 14 games, so after 7 games it still holds 67% of the weight.</p></div>
+    <div class="card"><h3>Continuity-adjusted</h3><p>Regressed, but ρ and τ depend on c, the share of last season's minutes still on the roster: ρ(c) = 0.27 + 0.47c. An intact roster (c ≈ 1) carries over more and is worth about 26 games; a rebuilt one (c ≈ 0.3) about 10.</p></div>
     <div class="card"><h3>Your projection</h3><p>Any pre-season number (a model, a market line) with its own K = σ<sub>e</sub>²/τ². A line with error SD 3.5 is worth about 16 games. Supply it as <code>--prior-csv</code>.</p></div>
   </div>
-  <p>All four give the team's <b>current true level</b>, not a season total. A projected final = (n·raw + (82−n)·estimate)/82.</p>
+  <p>The cards use Net Rtg, whose league average is 0. In general every prior is centred on <b>this season's league average plus the team's gap from last season's league average</b>: μ = μ<sub>now</sub> + ρ·(last − μ<sub>last</sub>). A league-wide shift, such as turnovers up 1.1 points in 2026-27, then moves every prior with it instead of making all 30 teams look changed.</p>
+  <p>All of them give the team's <b>current true level</b>, not a season total. A projected final = (n·raw + (82−n)·estimate)/82.</p>
+</section>
+
+<!-- ============================================================ 5b. models -->
+<section id="models">
+  <div class="eyebrow">Three models</div>
+  <h2>Season average, current form, full strength</h2>
+  <p>The shrinkage above treats the season so far as repeated measurements of one fixed level. Teams are not fixed: rotations settle, players get hurt, trades happen. The rankings page offers three readings of the same games, all with the same priors.</p>
+  <div class="grid2">
+    <div class="card"><h3>Season average</h3><p>One constant level; every game counts the same. Estimate = w·(this season) + (1−w)·prior, range σ<sub>e</sub>/√(G+K).</p></div>
+    <div class="card"><h3>Current form</h3><p>The level may drift a little each game: θ<sub>t</sub> = θ<sub>t−1</sub> + η, Var η = q. A Kalman filter discounts old games and widens the range, because today's level is pinned down less well than the average.</p></div>
+    <div class="card"><h3>Full strength</h3><p>Current form after crediting each game for the talent that sat out. Answers "how good is this roster with its normal rotation", not "what will the record be". Net and Off Rtg only.</p></div>
+  </div>
+  <h3>How much drift?</h3>
+  <p>q is fitted per stat by maximum likelihood of one-step-ahead predictions on 2016–2025, using values relative to each game night's league average so that league-wide trends are not mistaken for team drift. With q = 0 the filter reproduces the season average exactly.</p>
+  <div class="wrap"><table>
+    <thead><tr><th>stat</th><th>q / σ<sub>e</sub>²</th><th>half-life of a game's weight</th></tr></thead>
+    <tbody>
+      <tr><td>3PAr</td><td>0.005</td><td>10 games</td></tr>
+      <tr><td>Net Rtg, Off Rtg, Pace</td><td>0.001</td><td>22 games</td></tr>
+      <tr><td>Def Rtg, FTR</td><td>0.0005</td><td>31 games</td></tr>
+      <tr><td>EFG%, Opp. EFG%</td><td>0.0002</td><td>49 games</td></tr>
+      <tr><td>TOV%</td><td>0.0001</td><td>69 games</td></tr>
+    </tbody>
+  </table></div>
+  <p>Drift barely changes the point estimate, but it fixes the error bars. Back-tested on every checkpoint of 2016–2025, the season-average model's "68%" ranges caught only 50–66% of what followed and its "95%" ranges 76–94%. With drift they catch 68–72% and 95–96%.</p>
+  <h3>Full strength</h3>
+  <p>For each game, on-floor talent = Σ r<sub>p</sub> · minutes/48, where r<sub>p</sub> is the player's prior-season BPM (OBPM for Off Rtg) shrunk toward replacement level with 500 minutes of evidence. A player's normal minutes are the median over the games the player was available for, with a coach's-decision DNP counting as 0; a player who has been unavailable all along gets last season's minutes. Full strength fills 240 minutes from the most-used player down, so a returning starter pushes out the end of the bench. The game's value is moved by β × (full − on-floor talent); β is the within-team slope of results on missing talent, fitted on 2022-23 to 2024-25 (leave-one-season-out in the back-test).</p>
+  <p>A prior describes a typical season, absences included. At full strength the priors, the league average and the dashed line all move up by β × the league's average missing talent so far, about +0.7 Net Rtg in 2026-27, so "better than average" still means better than an average team at full strength.</p>
+  <div class="wrap"><table>
+    <thead><tr><th>rest-of-season RMSE, 2022-23 to 2024-25</th><th>no adjustment</th><th>usual absences</th><th>fully healthy</th><th>actual future absences</th></tr></thead>
+    <tbody>
+      <tr><td>Net Rtg</td><td>3.96</td><td>3.96</td><td>4.17</td><td>3.77</td></tr>
+      <tr><td>Off Rtg</td><td>3.03</td><td>3.02</td><td>3.25</td><td>2.93</td></tr>
+      <tr><td>Def Rtg</td><td>2.64</td><td>2.69</td><td>2.64</td><td>2.66</td></tr>
+    </tbody>
+  </table></div>
+  <p id="fullBacktest" style="font-size:13px;color:var(--muted)">Crediting missing talent at the usual rate barely changes predictions; knowing who will actually miss the rest of the season would cut the error by 3–5%, which is what injury reports would add (not used yet). Assuming a fully healthy rest of season predicts clearly worse, so Full strength is a what-if, not a forecast. Def Rtg is left out: defensive BPM is too weak a signal for even perfect absence data to help.</p>
 </section>
 
 <!-- ============================================================ 6. quarters -->
@@ -250,15 +289,17 @@
 <!-- ============================================================ 7. reading the rank page -->
 <section id="reading">
   <div class="eyebrow">Reading the rankings page</div>
-  <h2>What each column is</h2>
+  <h2>What each mark and column is</h2>
   <dl class="kv">
-    <dt>raw</dt><dd>this season's value, ratio of season-to-date sums</dd>
-    <dt>Δ</dt><dd>raw minus last season's full value</dd>
+    <dt>bar / line</dt><dd>68% / 95% range of the team's true level under the chosen model and prior; the tick inside is the estimate</dd>
+    <dt>circle</dt><dd>this season's raw value, ratio of season-to-date sums</dd>
+    <dt>dashed line</dt><dd>this season's league average; the better / worse chips ask whether the 68% (likely) or 95% (clearly) range excludes it</dd>
+    <dt>x-axis</dt><dd>fixed per stat across models and priors, so a range that moves when you switch really moved</dd>
+    <dt>Δ vs lg</dt><dd>raw minus last season's value, with the league-wide shift taken out</dd>
     <dt>z</dt><dd>Δ divided by the sampling noise of both values; |z| &gt; 2 is unlikely to be luck, but says nothing about the cause</dd>
-    <dt>league mean / last season / regressed</dt><dd>the estimate under each prior, and the rank it implies</dd>
     <dt>k</dt><dd>that stat's exchange rate; small k means the raw value already dominates the prior</dd>
   </dl>
-  <p style="font-size:13px;color:var(--muted)">Source: <code>nba-stab</code> on Basketball-Reference game logs; curves and k from 2015-16 to 2024-25, rankings from 2026-27 games through 4 Nov 2026.</p>
+  <p style="font-size:13px;color:var(--muted)">Source: <code>nba-stab</code> on Basketball-Reference game logs; curves and k from 2015-16 to 2024-25, rankings updated daily from 2026-27 games.</p>
 </section>
 
 </main>

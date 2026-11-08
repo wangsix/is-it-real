@@ -36,6 +36,16 @@
     --good: #58c47a; --good-soft: #1e3a26; --bad: #ef7f73; --bad-soft: #43231f; --neutral-soft: #2c3134; color-scheme: dark;
   }
   [hidden] { display: none !important; }
+  /* bilingual labels: both languages are in the DOM, stacked in one grid cell; the inactive one is
+     invisible but still reserves space, so switching language never moves anything */
+  .bi { display: inline-grid; }
+  .bi > * { grid-area: 1 / 1; }
+  .bi.blk { display: grid; }
+  .bi.blk > * { display: block; }
+  main:not([data-lang="zh"]) .bi > [lang="zh-Hant"], main[data-lang="zh"] .bi > [lang="en"] { visibility: hidden; }
+  .seg button .bi, button.toggle .bi, nav.tabs .bi { justify-items: center; }
+  .langseg button { font-size: 12px; padding: 3px 9px; }
+  .prefs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.4;
          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
          padding-block: 20px 40px; }
@@ -49,7 +59,8 @@
   nav.tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); }
   nav.tabs a:hover { color: var(--fg); }
   .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
-  .ctl { display: flex; align-items: center; gap: 6px; }
+  .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+  .seg button { white-space: nowrap; }
   .ctl > span { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
   .step { font: inherit; font-size: 15px; line-height: 1; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); cursor: pointer; }
   .step:hover { border-color: var(--muted); }
@@ -59,11 +70,37 @@
   .seg button + button { border-left: 1px solid var(--line); }
   .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
   .seg button:disabled { opacity: .45; cursor: not-allowed; }
+  button.toggle { font: inherit; font-size: 13px; padding: 4px 10px 4px 26px; border: 1px solid var(--line); border-radius: 6px;
+                  background: var(--surface); color: var(--muted); cursor: pointer; position: relative; }
+  button.toggle::before { content: ""; position: absolute; left: 8px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+                          border-radius: 50%; border: 1.5px solid var(--muted); box-sizing: border-box; }
+  button.toggle[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
+  button.toggle[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
   label.chk { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
   input[type=checkbox] { accent-color: var(--accent); }
   :is(select, button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .note { color: var(--muted); font-size: 12.5px; max-width: 90ch; }
   .note b { color: var(--fg); font-weight: 600; }
+  /* one-line summary; its height is reserved for the longest variant so the chart below never moves */
+  .summary { margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .summary b { color: var(--fg); font-weight: 600; }
+  .summary .sep { color: var(--line); padding: 0 6px; }
+  a.howlink { color: var(--accent); font-size: 13px; text-decoration: none; }
+  a.howlink:hover { text-decoration: underline; }
+  header a.howlink { margin-left: auto; }
+  button.info { font: 600 11px/1 var(--body); width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted);
+                background: transparent; color: var(--muted); cursor: pointer; padding: 0; font-style: italic; font-family: Georgia, serif; }
+  button.info:hover, button.info[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  .pop { position: absolute; z-index: 10; width: min(440px, calc(100vw - 32px)); background: var(--surface); color: var(--fg);
+         border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+         box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+  .pop h3 { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .03em; margin: 0 0 6px; }
+  .pop dl { margin: 0; display: grid; gap: 6px; }
+  .pop dt { font-weight: 600; }
+  .pop dd { margin: 0; color: var(--muted); }
+  .pop .cur dt::after { content: var(--sel-label, " · selected"); color: var(--accent); font-weight: 400; font-size: 11.5px; }
+  .pop .cur { border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -11px; }
+  .pop p { margin: 6px 0 0; color: var(--muted); }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--muted); align-items: center; }
   .legend svg { vertical-align: middle; }
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
@@ -126,27 +163,32 @@
 
 <main>
   <header>
-    <h1>Is it real?</h1>
+    <h1><span class="bi"><span lang="en">Is it real?</span><span lang="zh-Hant">是真的嗎？</span></span></h1>
     <span class="sub" id="subtitle"></span>
-    <a class="sub" href="explainer.html">How the numbers work →</a>
+    <a class="howlink" id="howLink" href="explainer.html" target="_blank" rel="noopener"><span class="bi"><span lang="en">How it works ↗</span><span lang="zh-Hant">方法說明（英文）↗</span></span></a>
+    <div class="prefs">
+      <div class="seg langseg" id="themeSeg" role="group" aria-label="Theme / 外觀"><button type="button" data-theme-pick="auto"><span aria-hidden="true">◐</span> <span class="bi"><span lang="en">Auto</span><span lang="zh-Hant">自動</span></span></button><button type="button" data-theme-pick="light"><span aria-hidden="true">☀</span> <span class="bi"><span lang="en">Light</span><span lang="zh-Hant">淺色</span></span></button><button type="button" data-theme-pick="dark"><span aria-hidden="true">☾</span> <span class="bi"><span lang="en">Dark</span><span lang="zh-Hant">深色</span></span></button></div>
+      <div class="seg langseg" id="langSeg" role="group" aria-label="Language / 語言"><button type="button" data-lang="en" lang="en">EN</button><button type="button" data-lang="zh" lang="zh-Hant">中文</button></div>
+    </div>
   </header>
 
   <nav class="tabs" aria-label="Views">
-    <a href="#bystat" data-view="bystat">By stat</a>
-    <a href="#funnel" data-view="funnel">Funnel</a>
-    <a href="#byteam" data-view="byteam">By team</a>
-    <a href="#table" data-view="table">Table</a>
+    <a href="#bystat" data-view="bystat"><span class="bi"><span lang="en">By stat</span><span lang="zh-Hant">依數據</span></span></a>
+    <a href="#funnel" data-view="funnel"><span class="bi"><span lang="en">Funnel</span><span lang="zh-Hant">漏斗圖</span></span></a>
+    <a href="#byteam" data-view="byteam"><span class="bi"><span lang="en">By team</span><span lang="zh-Hant">依球隊</span></span></a>
+    <a href="#table" data-view="table"><span class="bi"><span lang="en">Table</span><span lang="zh-Hant">表格</span></span></a>
   </nav>
 
   <div class="controls">
-    <div class="ctl" id="statCtl"><span>Stat</span><button type="button" class="step" data-step="-1" aria-label="Previous stat">‹</button><select id="stat" aria-label="Stat"></select><button type="button" class="step" data-step="1" aria-label="Next stat">›</button></div>
-    <div class="ctl" id="teamCtl" hidden><span>Team</span><button type="button" class="step" data-step="-1" aria-label="Previous team">‹</button><select id="team" aria-label="Team"></select><button type="button" class="step" data-step="1" aria-label="Next team">›</button></div>
-    <div class="ctl" id="modelCtl"><span>Model</span><div class="seg" id="modelSeg" role="group" aria-label="Model"></div></div>
-    <div class="ctl" id="priorCtl"><span>Prior</span><div class="seg" id="priorSeg" role="group" aria-label="Prior"></div></div>
-    <label class="chk" id="band2Ctl"><input type="checkbox" id="band2" checked> show 95% range</label>
+    <div class="ctl" id="statCtl"><span><span class="bi"><span lang="en">Stat</span><span lang="zh-Hant">數據</span></span></span><button type="button" class="info" data-pop="stat" aria-label="About this stat" aria-expanded="false" aria-controls="pop">i</button><button type="button" class="step" data-step="-1" aria-label="Previous stat">‹</button><select id="stat" aria-label="Stat"></select><button type="button" class="step" data-step="1" aria-label="Next stat">›</button></div>
+    <div class="ctl" id="teamCtl" hidden><span><span class="bi"><span lang="en">Team</span><span lang="zh-Hant">球隊</span></span></span><button type="button" class="step" data-step="-1" aria-label="Previous team">‹</button><select id="team" aria-label="Team"></select><button type="button" class="step" data-step="1" aria-label="Next team">›</button></div>
+    <div class="ctl" id="modelCtl"><span><span class="bi"><span lang="en">Model</span><span lang="zh-Hant">模型</span></span></span><button type="button" class="info" data-pop="model" aria-label="About the models" aria-expanded="false" aria-controls="pop">i</button><div class="seg" id="modelSeg" role="group" aria-label="Model"></div></div>
+    <div class="ctl" id="priorCtl"><span><span class="bi"><span lang="en">Prior</span><span lang="zh-Hant">先驗</span></span></span><button type="button" class="info" data-pop="prior" aria-label="About the priors" aria-expanded="false" aria-controls="pop">i</button><div class="seg" id="priorSeg" role="group" aria-label="Prior"></div></div>
+    <button type="button" class="toggle" id="autosort" aria-pressed="true"><span class="bi"><span lang="en">Auto-sort</span><span lang="zh-Hant">自動排序</span></span></button>
+    <label class="chk" id="band2Ctl"><input type="checkbox" id="band2" checked> <span class="bi"><span lang="en">show 95% range</span><span lang="zh-Hant">顯示 95% 區間</span></span></label>
   </div>
-  <p class="note" id="modelNote"></p>
-  <p class="note" id="priorNote"></p>
+  <p class="summary" id="summary" aria-live="polite"></p>
+  <div class="pop" id="pop" role="dialog" aria-modal="false" hidden></div>
 
   <!-- ===== by stat ===== -->
   <section id="v-bystat" class="panel">
@@ -161,7 +203,7 @@
     <div class="legend" id="legend3"></div>
     <svg id="funnel" role="img"></svg>
     <div id="fstatus" class="status" aria-live="polite"></div>
-    <p class="note" style="margin-top:8px">If a team were exactly league average, its raw value after n games would fall inside the dark band 95% of the time and inside the light band 99.8% of the time, from game-to-game noise alone. The bands narrow as 1/√n. A team outside them is very unlikely to be average. A team inside them is not shown to be average: the games so far cannot yet separate it from average. The funnel uses no prior; the By stat view combines these numbers with a prior.</p>
+    <p class="note bi blk" style="margin-top:8px"><span lang="en">If a team were exactly league average, its raw value after n games would fall inside the dark band 95% of the time and inside the light band 99.8% of the time, from game-to-game noise alone. The bands narrow as 1/√n. A team outside them is very unlikely to be average. A team inside them is not shown to be average: the games so far cannot yet separate it from average. The funnel uses no prior; the By stat view combines these numbers with a prior.</span><span lang="zh-Hant">如果一隊剛好是聯盟平均，單靠逐場雜訊，它打了 n 場後的原始數值有 95% 的機率落在深色帶內、99.8% 的機率落在淺色帶內。帶寬隨 1/√n 收窄。落在帶外的球隊幾乎不可能只是平均水準；落在帶內並不代表就是平均，只是目前的場數還無法把它和平均區分開。漏斗圖不使用先驗；「依數據」檢視才把這些數字和先驗結合。</span></p>
   </section>
 
   <!-- ===== by team ===== -->
@@ -169,16 +211,16 @@
     <div class="card-head"><h2 id="teamName"></h2><span class="sub" id="teamSub"></span></div>
     <div class="legend" id="legend2"></div>
     <div class="tc" id="teamCard"></div>
-    <p class="note" style="margin-top:8px">Chip: <b>clearly</b> = the 95% range excludes this season's league average; <b>likely</b> = the 68% range does; otherwise the data cannot yet separate this team from average. Pace, 3PAr, FTR, AST% and Opp. 3PAr are style stats, so their chips say high or low, not better or worse. Click a stat to open it in the By stat view.</p>
+    <p class="note bi blk" style="margin-top:8px"><span lang="en">Chip: <b>clearly</b> = the 95% range excludes this season's league average; <b>likely</b> = the 68% range does; otherwise the data cannot yet separate this team from average. Pace, 3PAr, FTR, AST% and Opp. 3PAr are style stats, so their chips say high or low, not better or worse. Click a stat to open it in the By stat view.</span><span lang="zh-Hant">標籤：<b>明顯</b> = 95% 區間不含本季聯盟平均；<b>可能</b> = 68% 區間不含；否則目前資料還無法把這隊和平均區分開。Pace、3PAr、FTR、AST%、Opp. 3PAr 是風格數據，標籤顯示偏高或偏低，而非好壞。點數據名稱可在「依數據」檢視中開啟。</span></p>
   </section>
 
   <!-- ===== table ===== -->
   <section id="v-table" hidden>
     <div class="wrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
-    <p class="note" style="margin-top:8px">± is one standard deviation of the team's true level under that prior: the true value is within estimate ± SD about 68% of the time. Δ is the change since last season relative to the league (the league-wide shift is removed), and z is Δ in units of sampling noise. Click a header to sort; click again to reverse. Click a team to open its card.</p>
+    <p class="note bi blk" style="margin-top:8px"><span lang="en">± is one standard deviation of the team's true level under that prior: the true value is within estimate ± SD about 68% of the time. Δ is the change since last season relative to the league (the league-wide shift is removed), and z is Δ in units of sampling noise. Click a header to sort; click again to reverse. Click a team to open its card.</span><span lang="zh-Hant">± 是該先驗下球隊真實水準的一個標準差：約 68% 的機率真實值落在估計 ± SD 之內。Δ 是相對於聯盟的季間變化（已扣除全聯盟的整體變動），z 是 Δ 除以抽樣雜訊。點欄位標題排序，再點一次反向。點球隊開啟球隊卡。</span></p>
   </section>
 
-  <p class="note" id="howNote"></p>
+  <p class="note bi blk" id="srcNote"></p>
 </main>
 
 <script>
@@ -201,16 +243,47 @@
   const $ = id => document.getElementById(id);
   const NS = "http://www.w3.org/2000/svg";
   const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
-  const PRIOR_LABEL = { "league mean": "League avg", "last season": "Last season", "regressed last season": "Regressed", "continuity-adjusted": "Continuity" };
+  const PRIOR_EN = { "league mean": "League avg", "last season": "Last season", "regressed last season": "Regressed", "continuity-adjusted": "Continuity" };
+  const PRIOR_ZH = { "league mean": "聯盟平均", "last season": "上季", "regressed last season": "回歸上季", "continuity-adjusted": "陣容延續" };
 
   // ---------- state ----------
   const priorNames = DATA.stats[0].priors.map(p => p.name);
-  const MODELS = [["season", "Season average"], ["form", "Current form"], ["full", "Full strength"]];
-  let state = { view: "bystat", model: "form", stat: 0, team: null, prior: priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1], band2: true, sortKey: null, sortDir: 1 };
+  const MODELS = [["season", "Season average", "季平均"], ["form", "Current form", "近況"], ["full", "Full strength", "完整戰力"]];
+  const defaultLang = /^zh/i.test(navigator.language || "") ? "zh" : "en";
+  let state = { theme: "auto", lang: defaultLang, view: "bystat", model: "form", stat: 0, team: null, prior: priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1], band2: true, autosort: true, sortKey: null, sortDir: 1 };
   try { const s = JSON.parse(localStorage.getItem("shrunk-ratings") || "null"); if (s) state = Object.assign(state, s); } catch (e) {}
   if (!(state.stat < DATA.stats.length)) state.stat = 0;
   if (!priorNames.includes(state.prior)) state.prior = priorNames[priorNames.length - 1];
   if (!MODELS.some(m => m[0] === state.model) || (state.model === "full" && !DATA.has_full)) state.model = "form";
+  if (state.lang !== "zh" && state.lang !== "en") state.lang = defaultLang;
+  if (!["auto", "light", "dark"].includes(state.theme)) state.theme = "auto";
+  // ---------- theme ----------
+  // "auto" keeps whatever the host page set on <html data-theme> (or the OS setting when unset);
+  // "light"/"dark" pin it. The colour tokens in :root already cover all three cases.
+  const root = document.documentElement;
+  let hostTheme = root.getAttribute("data-theme");
+  function applyTheme() {
+    const want = state.theme === "auto" ? hostTheme : state.theme;
+    if (root.getAttribute("data-theme") !== want) { if (want) root.setAttribute("data-theme", want); else root.removeAttribute("data-theme"); }
+    document.querySelectorAll("#themeSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.themePick === state.theme ? "true" : "false"));
+  }
+  // The host may change data-theme later (e.g. claude.ai switching theme): follow it on "auto",
+  // remember it and keep the viewer's pick otherwise. Writes only happen when the value differs, so no loop.
+  new MutationObserver(() => {
+    const cur = root.getAttribute("data-theme");
+    if (state.theme === "auto") { hostTheme = cur; return; }
+    if (cur !== state.theme) { hostTheme = cur; applyTheme(); }
+  }).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  applyTheme();
+  // ---------- language ----------
+  const ZH = () => state.lang === "zh";
+  const T = (en, zh) => ZH() ? zh : en;                       // flowing text: current language only
+  const B = (en, zh) => `<span class="bi"><span lang="en">${en}</span><span lang="zh-Hant">${zh}</span></span>`;  // layout-stable label
+  const PL = nm => T(PRIOR_EN[nm] || nm, PRIOR_ZH[nm] || nm);
+  const PLB = nm => B(PRIOR_EN[nm] || nm, PRIOR_ZH[nm] || nm);
+  const ML = k => { const m = MODELS.find(m => m[0] === k); return T(m[1], m[2]); };
+  const MLB = k => { const m = MODELS.find(m => m[0] === k); return B(m[1], m[2]); };
+  const noteOf = p => T(p.note, p.note_zh || p.note);
   const save = () => { try { localStorage.setItem("shrunk-ratings", JSON.stringify(state)); } catch (e) {} };
 
   // ---------- formatting ----------
@@ -224,19 +297,21 @@
   }
   const fmtK = (k, d) => k == null ? "∞" : k.toFixed(d);
   const fmtSd = (v, st) => v == null ? "—" : (isPct(st) ? v * 100 : v).toFixed(1);
-  const unitWord = st => isPct(st) ? " pct pts" : "";
-  const ord = n => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
+  const unitWord = st => isPct(st) ? T(" pct pts", " 個百分點") : "";
+  const ordEn = n => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
   // "2016-2025" (season end years) -> "2015-16 to 2024-25"
-  const seasonSpan = spec => { const m = /^(\d{4})-(\d{4})$/.exec(spec || ""); return m ? `${m[1] - 1}-${m[1].slice(2)} to ${m[2] - 1}-${m[2].slice(2)}` : (spec || "past seasons"); };
+  const seasonSpan = (spec, zh = ZH()) => { const m = /^(\d{4})-(\d{4})$/.exec(spec || ""); return m ? `${m[1] - 1}-${m[1].slice(2)}${zh ? " 至 " : " to "}${m[2] - 1}-${m[2].slice(2)}` : (spec || (zh ? "過去球季" : "past seasons")); };
   const NTEAMS = DATA.teams.length;
 
   // ---------- header / controls ----------
-  $("subtitle").textContent = `${DATA.season} after ${DATA.games[0]}–${DATA.games[1]} games${DATA.through ? ", games through " + DATA.through : ""} · vs ${DATA.last} full season`;
+  $("subtitle").innerHTML = B(`${DATA.season} after ${DATA.games[0]}–${DATA.games[1]} games${DATA.through ? ", games through " + DATA.through : ""} · vs ${DATA.last} full season`,
+                             `${DATA.season} 球季 ${DATA.games[0]}–${DATA.games[1]} 場後${DATA.through ? "，比賽至 " + DATA.through : ""} · 對照 ${DATA.last} 全季`);
   DATA.stats.forEach((s, i) => { const o = document.createElement("option"); o.value = i; o.textContent = s.name; $("stat").appendChild(o); });
   DATA.teams.forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; $("team").appendChild(o); });
-  MODELS.forEach(([k, label]) => { const b = document.createElement("button"); b.type = "button"; b.dataset.model = k; b.textContent = label; if (k === "full" && !DATA.has_full) { b.disabled = true; b.title = "needs player minutes for this season"; } $("modelSeg").appendChild(b); });
-  priorNames.forEach(nm => { const b = document.createElement("button"); b.type = "button"; b.dataset.prior = nm; b.textContent = PRIOR_LABEL[nm] || nm; $("priorSeg").appendChild(b); });
-  $("howNote").innerHTML = `How it works: each prior is centred on this season's league average plus the team's gap from last season's league average, so a league-wide shift is not read as a team change. With no drift, estimate = w·(this season) + (1−w)·prior, with w = G/(G+K). The uncertainty of the true level is σ<sub>e</sub>/√(G+K), where σ<sub>e</sub> is the single-game noise of the stat. More games or a stronger prior (larger K) make the range narrower. Current form and full strength do the same calculation with a Kalman filter that lets the level drift between games. Source: Basketball-Reference box scores; k and σ<sub>e</sub> from ${seasonSpan(DATA.k_seasons)}.`;
+  MODELS.forEach(([k]) => { const b = document.createElement("button"); b.type = "button"; b.dataset.model = k; b.innerHTML = MLB(k); if (k === "full" && !DATA.has_full) b.disabled = true; $("modelSeg").appendChild(b); });
+  priorNames.forEach(nm => { const b = document.createElement("button"); b.type = "button"; b.dataset.prior = nm; b.innerHTML = PLB(nm); $("priorSeg").appendChild(b); });
+  $("srcNote").innerHTML = `<span lang="en">Source: Basketball-Reference box scores; k and σ<sub>e</sub> from ${seasonSpan(DATA.k_seasons, false)}. Each stat keeps one x-axis across models and priors, so a range that moves really moved. Method, definitions and back-tests: <a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">how it works</a>.</span>` +
+    `<span lang="zh-Hant">資料來源：Basketball-Reference 逐場數據；k 與 σ<sub>e</sub> 取自 ${seasonSpan(DATA.k_seasons, true)} 球季。每項數據在不同模型與先驗之間使用同一條 x 軸，所以區間移動就是真的移動。方法、定義與回測：<a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">方法說明（英文）</a>。</span>`;
 
   const S = () => DATA.stats[state.stat];
   const hasFull = st => st.beta != null;
@@ -254,59 +329,181 @@
     const dir = st.style ? 1 : better(st);
     return st.rows.filter(r => est(r, nm) != null).slice().sort((a, b) => dir * (est(b, nm) - est(a, nm)));
   }
+  // Display order: by estimate when auto-sort is on; otherwise frozen per stat at the
+  // moment it is first shown with auto-sort off (not saved across reloads).
+  let FROZEN = {};
+  function displayRows(st) {
+    const ranked = sortedRows(st);
+    if (state.autosort) return ranked;
+    if (!FROZEN[st.name]) FROZEN[st.name] = ranked.map(r => r.team);
+    const pos = new Map(FROZEN[st.name].map((t, i) => [t, i]));
+    return ranked.slice().sort((a, b) => (pos.get(a.team) ?? 99) - (pos.get(b.team) ?? 99));
+  }
+  // League average under the shown model: at full strength the whole league moves up by its average missing talent.
+  const baseline = st => (state.model === "full" && hasFull(st) && st.league_mean_full != null) ? st.league_mean_full : st.league_mean;
   function verdict(st, r) {
-    const m = st.league_mean, e = est(r), s = sd(r);
-    if (e == null || s == null) return { cls: "neutral", txt: "—" };
+    const m = baseline(st), e = est(r), s = sd(r);
+    const mk = (cls, en, zh) => ({ cls, en, zh, txt: T(en, zh) });
+    if (e == null || s == null) return mk("neutral", "—", "—");
     const z = (e - m) / s, a = Math.abs(z);
-    const level = a >= 2 ? "clearly" : a >= 1 ? "likely" : null;
-    if (!level) return { cls: "neutral", txt: "≈ average" };
-    if (st.style) return { cls: "hi", txt: `${level} ${z > 0 ? "high" : "low"}` };
+    const level = a >= 2 ? ["clearly", "明顯"] : a >= 1 ? ["likely", "可能"] : null;
+    if (!level) return mk("neutral", "≈ average", "≈ 平均");
+    if (st.style) return mk("hi", `${level[0]} ${z > 0 ? "high" : "low"}`, `${level[1]}${z > 0 ? "偏高" : "偏低"}`);
     const good = z * better(st) > 0;
-    return { cls: good ? "good" : "bad", txt: `${level} ${good ? "better" : "worse"}` };
+    return mk(good ? "good" : "bad", `${level[0]} ${good ? "better" : "worse"}`, `${level[1]}${good ? "較好" : "較差"}`);
   }
 
   function legend(target) {
     const sw = (inner, w = 34) => `<svg width="${w}" height="14" aria-hidden="true">${inner}</svg>`;
     $(target).innerHTML =
-      `<span>${sw('<rect x="2" y="3" width="30" height="8" rx="2" fill="var(--accent)" opacity=".85"/>')} 68% range of true level</span>` +
-      (state.band2 ? `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--accent)" stroke-width="2" opacity=".4"/>')} 95% range</span>` : "") +
-      `<span>${sw('<rect x="14" y="1" width="5" height="12" fill="var(--fg)" />', 34)} estimate</span>` +
-      `<span>${sw('<circle cx="17" cy="7" r="4" fill="none" stroke="var(--raw)" stroke-width="2"/>')} this season raw</span>` +
-      `<span>${sw('<line x1="17" y1="2" x2="17" y2="12" stroke="var(--muted)" stroke-width="2"/>')} last season</span>` +
-      `<span>${sw('<line x1="17" y1="0" x2="17" y2="14" stroke="var(--fg)" stroke-dasharray="2 2"/>')} league avg this season</span>`;
+      `<span>${sw('<rect x="2" y="3" width="30" height="8" rx="2" fill="var(--accent)" opacity=".85"/>')} ${B("68% range of true level", "真實水準 68% 區間")}</span>` +
+      (state.band2 ? `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--accent)" stroke-width="2" opacity=".4"/>')} ${B("95% range", "95% 區間")}</span>` : "") +
+      `<span>${sw('<rect x="14" y="1" width="5" height="12" fill="var(--fg)" />', 34)} ${B("estimate", "估計值")}</span>` +
+      `<span>${sw('<circle cx="17" cy="7" r="4" fill="none" stroke="var(--raw)" stroke-width="2"/>')} ${B("this season raw", "本季原始值")}</span>` +
+      `<span>${sw('<line x1="17" y1="2" x2="17" y2="12" stroke="var(--muted)" stroke-width="2"/>')} ${B("last season", "上季")}</span>` +
+      `<span>${sw('<line x1="17" y1="0" x2="17" y2="14" stroke="var(--fg)" stroke-dasharray="2 2"/>')} ${B("league avg, same model", "聯盟平均（同模型）")}</span>`;
   }
 
-  function modelNote() {
-    const st = S(), hl = halfLife(st.q_ratio);
-    const txt = {
-      season: "<b>Season average</b>: one constant true level for the season so far; every game counts the same.",
-      form: `<b>Current form</b>: the true level can drift a small amount each game (fitted on ${seasonSpan(DATA.k_seasons)}: half-life ${Number.isFinite(hl) ? Math.round(hl) + " games" : "none"} for ${st.name}). Recent games count slightly more and the ranges are wider; back-tests show that this gives correct 68%/95% coverage.`,
-      full: hasFull(st)
-        ? `<b>Full strength</b>: current form after crediting each game for the talent that sat out (players' prior-season BPM × minutes missed, β = ${st.beta.toFixed(2)}). The level this roster would play at with its normal rotation.`
-        : `<b>Full strength</b> applies only to Net, Off and Def Rtg; ${st.name} shows current form.`,
-    };
-    $("modelNote").innerHTML = txt[state.model];
+  // ---------- summary line + info popovers ----------
+  const PRIOR_ABOUT_ZH = {
+    "league mean": "把每隊往本季聯盟平均拉，權重為 k 場。不使用任何球隊資訊。",
+    "last season": "上季相對聯盟的差距全數沿用，權重為 k。假設休賽季沒有任何變化。",
+    "regressed last season": "上季差距乘上 ρ（逐年延續的比例，以 2016–2026 擬合）。權重 K 取決於這種預測通常差多少。",
+    "continuity-adjusted": "同回歸上季，但 ρ 與 K 依 c 而定：c 是上季上場時間仍留在陣中的比例。陣容完整的球隊延續較多，先驗權重也較重。",
+  };
+  const MODEL_ABOUT_ZH = {
+    season: "本季至今視為一個固定的真實水準，每場比賽權重相同。",
+    form: "真實水準每場可能小幅漂移，所以近期比賽權重略高、區間較寬。2016–2025 的回測顯示，需要這樣較寬的區間，68%／95% 的涵蓋率才會準確。",
+    full: "近況模型，再把每場缺陣球員的戰力補回（球員上季 BPM × 缺陣分鐘，乘上 β）。代表這套陣容以正常輪替出賽時的水準。僅限 Net Rtg 與 Off Rtg：回測中防守 BPM 沒有可用的訊號。",
+  };
+  const PRIOR_ABOUT = {
+    "league mean": "Pads every team toward this season's league average with k games of it. Knows nothing about the team.",
+    "last season": "Last season's gap from the league, carried over in full with weight k. Assumes no off-season change.",
+    "regressed last season": "Last season's gap shrunk by ρ (how much carries over year to year, fitted on 2016–2026). Its weight K comes from how wrong that projection usually is.",
+    "continuity-adjusted": "Like Regressed, but ρ and K depend on c, the share of last season's minutes still on the roster. Intact rosters carry over more and get a heavier prior.",
+  };
+  const MODEL_ABOUT = {
+    season: "One constant true level for the season so far; every game counts the same.",
+    form: "The true level may drift a little each game, so recent games count slightly more and ranges are wider. Back-testing on 2016–2025 showed the wider ranges are needed for honest 68%/95% coverage.",
+    full: "Current form after crediting each game for the talent that sat out (players' prior-season BPM × minutes missed, scaled by β). The level this roster would play at with its normal rotation. Net and Off Rtg only: defensive BPM showed no usable signal in back-tests.",
+  };
+  const weightRange = (st, nm) => {
+    const ws = st.rows.map(r => r[nm + " w"]).filter(w => w != null);
+    return ws.length ? (Math.min(...ws) === Math.max(...ws) ? ws[0].toFixed(2) : `${Math.min(...ws).toFixed(2)}–${Math.max(...ws).toFixed(2)}`) : "—";
+  };
+  const hlText = st => { const hl = halfLife(st.q_ratio); return Number.isFinite(hl) ? T(`half-life ${Math.round(hl)} games`, `半衰期 ${Math.round(hl)} 場`) : T("no drift", "無漂移"); };
+  function summary() {
+    const st = S(), sep = '<span class="sep">|</span>', mk = ML(state.model), c = T(", ", "，");
+    let modelBit = mk;
+    if (state.model === "form") modelBit += c + hlText(st);
+    if (state.model === "full") modelBit = hasFull(st) ? `${mk}${c}β ${st.beta.toFixed(2)}` : T(`${mk} n/a, showing current form`, `${mk}不適用，顯示近況`);
+    const pr = T(`${PL(state.prior)} prior, weight on this season ${weightRange(st, state.prior)}`, `${PL(state.prior)}先驗，本季權重 ${weightRange(st, state.prior)}`);
+    const lm = fmt(st.league_mean, st, { plain: true }), ll = fmt(st.league_mean_last, st, { plain: true });
+    const kBit = T(`k ${fmtK(st.k, 1)} games`, `k ${fmtK(st.k, 1)} 場`);
+    if (state.view === "funnel") {
+      $("summary").innerHTML = `<b>${st.name}</b>${sep}${kBit}${sep}${T(`league avg ${lm} (last season ${ll})`, `聯盟平均 ${lm}（上季 ${ll}）`)}${sep}${T("raw values only: no model, no prior", "只看原始數值：不用模型、不用先驗")}`;
+      return;
+    }
+    $("summary").innerHTML = state.view === "byteam"
+      ? `<b>${T("All stats", "全部數據")}</b>${sep}${mk}${sep}${T(PL(state.prior) + " prior", PL(state.prior) + "先驗")}${sep}${T("click a stat name for its chart", "點數據名稱看該項圖表")}`
+      : `<b>${st.name}</b>${sep}${kBit}${sep}${baseline(st) !== st.league_mean
+          ? T(`league avg at full strength ${fmt(baseline(st), st, { plain: true })} (as played ${lm})`, `完整戰力聯盟平均 ${fmt(baseline(st), st, { plain: true })}（實際 ${lm}）`)
+          : T(`league avg ${lm} (last season ${ll})`, `聯盟平均 ${lm}（上季 ${ll}）`)}${sep}${modelBit}${sep}${pr}`;
   }
-  function priorNote() {
-    const st = S(), p = st.priors.find(p => p.name === state.prior);
-    const ws = st.rows.map(r => r[state.prior + " w"]).filter(w => w != null);
-    const wtxt = ws.length ? `${Math.min(...ws).toFixed(2)}–${Math.max(...ws).toFixed(2)}` + (state.model === "season" ? "" : " (before drift)") : "—";
-    $("priorNote").innerHTML = `<b>${st.name}</b>: k = ${fmtK(st.k, 1)} games, single-game noise σ<sub>e</sub> = ${fmtSd(st.noise_sd, st)}${unitWord(st)}, spread of true levels σ<sub>T</sub> = ${fmtSd(st.true_sd, st)}${unitWord(st)}. ` +
-      `League average this season ${fmt(st.league_mean, st, { plain: true })}, last season ${fmt(st.league_mean_last, st, { plain: true })}. ` +
-      `<b>${PRIOR_LABEL[p.name] || p.name}</b> prior: ${p.note}. Weight on this season's games: ${wtxt}.`;
+  // Reserve the tallest summary at the current width so the chart never moves.
+  let reservedW = -1;
+  function reserveSummary() {
+    const box = $("summary"), w = box.clientWidth;
+    if (w === reservedW) return;
+    reservedW = w;
+    const keep = { stat: state.stat, model: state.model, prior: state.prior, view: state.view, lang: state.lang };
+    box.style.minHeight = "";
+    let hmax = 0;
+    for (const lang of ["en", "zh"]) for (const view of ["bystat", "funnel", "byteam"]) for (let si = 0; si < DATA.stats.length; si++)
+      for (const [m] of MODELS) for (const pn of priorNames) {
+        Object.assign(state, { stat: si, model: m, prior: pn, view, lang });
+        summary(); hmax = Math.max(hmax, box.offsetHeight);
+      }
+    Object.assign(state, keep);
+    box.style.minHeight = hmax + "px";
   }
+  function popHTML(kind) {
+    const st = S(), item = (cur, dt, dd) => `<div class="${cur ? "cur" : ""}"><dt>${dt}</dt><dd>${dd}</dd></div>`;
+    const lm = fmt(st.league_mean, st, { plain: true }), ll = fmt(st.league_mean_last, st, { plain: true });
+    if (kind === "stat") return `<h3>${st.name}</h3><dl>` +
+      item(false, T(`k = ${fmtK(st.k, 1)} games`, `k = ${fmtK(st.k, 1)} 場`), T(`Noise variance ÷ true-talent variance. After k games the stat is half signal, half noise (reliability n/(n+k) = 0.5).`, `雜訊變異 ÷ 真實實力變異。打滿 k 場後，這項數據一半是訊號、一半是雜訊（信度 n/(n+k) = 0.5）。`)) +
+      item(false, T(`single-game noise σ<sub>e</sub> = `, `單場雜訊 σ<sub>e</sub> = `) + fmtSd(st.noise_sd, st) + unitWord(st), T(`How much one game's value scatters around the team's true level.`, `單場數值圍繞球隊真實水準的離散程度。`)) +
+      item(false, T(`spread of true levels σ<sub>T</sub> = `, `真實水準差距 σ<sub>T</sub> = `) + fmtSd(st.true_sd, st) + unitWord(st), T(`How far apart teams really are. k = (σ<sub>e</sub>/σ<sub>T</sub>)².`, `球隊之間實際差多少。k = (σ<sub>e</sub>/σ<sub>T</sub>)²。`)) +
+      item(false, T(`league average ${lm}`, `聯盟平均 ${lm}`), T(`This season's mean of the 30 teams (last season ${ll}). The dashed line and the better/worse chips use it.`, `本季 30 隊的平均（上季 ${ll}）。虛線與較好／較差標籤以此為準。`)) +
+      `</dl><p>${T(`Range of a team's true level: σ<sub>e</sub>/√(G+K) with G games played and K the prior's weight in games.`, `球隊真實水準的區間寬度：σ<sub>e</sub>/√(G+K)，G 為已賽場數，K 為先驗相當的場數。`)}</p>`;
+    if (kind === "model") return `<h3>${T("Model", "模型")}</h3><dl>` + MODELS.map(([k]) => {
+      let extra = "";
+      if (k === "form") extra = T(` For ${st.name}: ${hlText(st)}.`, `${st.name}：${hlText(st)}。`);
+      const lsh = st.league_mean_full != null ? fmtSd(Math.abs(st.league_mean_full - st.league_mean), st) : null;
+      if (k === "full") extra = hasFull(st) ? T(` For ${st.name}: β = ${st.beta.toFixed(2)}. Teams so far miss talent worth ${lsh} on average, so the league average, the priors and the dashed line all move by that much.`,
+                                                `${st.name}：β = ${st.beta.toFixed(2)}。目前各隊平均缺陣戰力相當於 ${lsh}，所以聯盟平均、先驗與虛線都一起移動這個量。`)
+        : DATA.has_full ? T(` Not available for ${st.name}; it shows current form.`, `${st.name} 不適用，顯示近況。`) : T(" Not available yet: needs this season's player minutes.", "目前無法使用：需要本季球員上場時間。");
+      return item(k === state.model, ML(k), T(MODEL_ABOUT[k], MODEL_ABOUT_ZH[k]) + extra);
+    }).join("") + `</dl>`;
+    return `<h3>${T("Prior", "先驗")}</h3><dl>` + st.priors.map(p => item(p.name === state.prior, PL(p.name),
+      T(`${PRIOR_ABOUT[p.name] || ""} <br>For ${st.name}: ${noteOf(p)}. Weight on this season's games: ${weightRange(st, p.name)}${state.model === "season" ? "" : " (before drift)"}.`,
+        `${PRIOR_ABOUT_ZH[p.name] || ""}<br>${st.name}：${noteOf(p)}。本季比賽權重：${weightRange(st, p.name)}${state.model === "season" ? "" : "（漂移前）"}。`))).join("") +
+      `</dl><p>${T(`Every prior is centred on this season's league average plus the team's gap from last season's, so league-wide shifts are not read as team changes. Estimate = w·(this season) + (1−w)·prior, with w = G/(G+K).`,
+        `每個先驗都以本季聯盟平均加上球隊上季相對聯盟的差距為中心，所以全聯盟的整體變動不會被誤認為球隊變化。估計 = w·（本季）+ (1−w)·先驗，w = G/(G+K)。`)}</p>`;
+  }
+  const pop = { kind: null, btn: null, pinned: false, t: 0 };
+  function placePop() {
+    const el_ = $("pop"), r = pop.btn.getBoundingClientRect(), w = el_.offsetWidth;
+    const left = Math.max(16, Math.min(r.left + scrollX - 12, scrollX + document.documentElement.clientWidth - w - 16));
+    el_.style.left = left + "px"; el_.style.top = (r.bottom + scrollY + 6) + "px";
+  }
+  function openPop(btn, pinned) {
+    clearTimeout(pop.t);
+    if (pop.btn && pop.btn !== btn) pop.btn.setAttribute("aria-expanded", "false");
+    Object.assign(pop, { kind: btn.dataset.pop, btn, pinned: pinned || (pop.btn === btn && pop.pinned) });
+    $("pop").innerHTML = popHTML(pop.kind); $("pop").hidden = false; btn.setAttribute("aria-expanded", "true"); placePop();
+  }
+  function closePop() {
+    clearTimeout(pop.t);
+    if (pop.btn) pop.btn.setAttribute("aria-expanded", "false");
+    Object.assign(pop, { kind: null, btn: null, pinned: false }); $("pop").hidden = true;
+  }
+  const softClose = () => { if (!pop.pinned) { clearTimeout(pop.t); pop.t = setTimeout(closePop, 180); } };
+  const hoverable = matchMedia("(hover: hover)").matches;
+  document.querySelectorAll("button.info").forEach(b => {
+    if (hoverable) { b.addEventListener("mouseenter", () => openPop(b, false)); b.addEventListener("mouseleave", softClose); }
+    b.addEventListener("click", ev => { ev.stopPropagation(); if (pop.btn === b && pop.pinned) closePop(); else openPop(b, true); });
+  });
+  $("pop").addEventListener("mouseenter", () => clearTimeout(pop.t));
+  $("pop").addEventListener("mouseleave", softClose);
+  $("pop").addEventListener("click", ev => ev.stopPropagation());
+  document.addEventListener("click", () => { if (pop.kind) closePop(); });
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && pop.kind) { const b = pop.btn; closePop(); b.focus(); } });
+  window.addEventListener("resize", () => { if (pop.kind) placePop(); });
+  const refreshPop = () => { if (pop.kind) { $("pop").innerHTML = popHTML(pop.kind); placePop(); } };
+  // explainer.html is next to index.html; the single-file build (data inlined) has no such file
+  const EXPLAINER = INLINE ? "https://claude.ai/artifact/EFjwZa4phhtrLgaZqVXpQD" : "explainer.html";
+  $("howLink").href = EXPLAINER; document.querySelectorAll("a.xl").forEach(a => { a.href = EXPLAINER; });
 
   // ---------- scales ----------
-  function domain(st, rows) {
-    let lo = Infinity, hi = -Infinity;
-    const k = state.band2 ? 2 : 1;
-    rows.forEach(r => {
-      const e = est(r), s = sd(r);
-      [e - k * s, e + k * s, r.raw, r.last].forEach(v => { if (v != null && !Number.isNaN(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+  // One x-range per stat, covering every model, prior and the 95% range, so switching
+  // model / prior / band never rescales the axis: only the marks move.
+  const DOMAINS = new Map();
+  function domain(st) {
+    if (DOMAINS.has(st)) return DOMAINS.get(st);
+    let lo = st.league_mean, hi = st.league_mean;
+    const take = v => { if (v != null && Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } };
+    take(st.league_mean_full);
+    st.rows.forEach(r => {
+      take(r.raw); take(r.last);
+      priorNames.forEach(nm => ["", " form", " full"].forEach(x => {
+        const e = r[nm + x], s = r[nm + x + " sd"];
+        if (e != null && s != null) { take(e - 2 * s); take(e + 2 * s); }
+      }));
     });
-    lo = Math.min(lo, st.league_mean); hi = Math.max(hi, st.league_mean);
-    const pad = (hi - lo) * 0.04;
-    return [lo - pad, hi + pad];
+    const pad = (hi - lo) * 0.04, d = [lo - pad, hi + pad];
+    DOMAINS.set(st, d);
+    return d;
   }
   function niceTicks(lo, hi, n) {
     const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
@@ -317,12 +514,13 @@
 
   // ---------- view: by stat ----------
   function drawForest() {
-    const st = S(), rows = sortedRows(st), svg = $("forest");
+    const st = S(), rows = displayRows(st), svg = $("forest");
+    const rankOf = new Map(sortedRows(st).map((r, i) => [r.team, i + 1]));
     const W = Math.max(320, svg.parentElement.clientWidth - 24), narrow = W < 560;
     const left = narrow ? 52 : 70, right = narrow ? 88 : 150, top = 30, rowH = narrow ? 22 : 24;
     const H = top + rows.length * rowH + 8;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H); svg.innerHTML = "";
-    const [lo, hi] = domain(st, rows);
+    const [lo, hi] = domain(st);
     const X = v => left + (v - lo) / (hi - lo) * (W - left - right);
     // grid + ticks
     niceTicks(isPct(st) ? lo * 100 : lo, isPct(st) ? hi * 100 : hi, narrow ? 4 : 7).forEach(t => {
@@ -330,13 +528,14 @@
       svg.appendChild(el("line", { x1: X(v), x2: X(v), y1: top - 4, y2: H - 6, stroke: "var(--line)", "stroke-width": 1 }));
       svg.appendChild(el("text", { x: X(v), y: top - 10, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, (signedStat(st) && t > 0 ? "+" : "") + t + (isPct(st) ? "%" : "")));
     });
-    svg.appendChild(el("text", { x: W - 4, y: top - 10, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, narrow ? "est ± SD" : "estimate ± SD"));
+    svg.appendChild(el("text", { x: W - 4, y: top - 10, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, narrow ? T("est ± SD", "估計 ± SD") : T("estimate ± SD", "估計值 ± SD")));
     rows.forEach((r, i) => {
       const y = top + i * rowH, cy = y + rowH / 2, e = est(r), s = sd(r);
+      const rk = rankOf.get(r.team), moved = !state.autosort && rk !== i + 1;
       const g = el("g", { class: "row-hit" + (r.team === state.team ? " sel" : ""), tabindex: 0, role: "button", "data-team": r.team,
-                          "aria-label": `${i + 1}. ${r.team}: estimate ${fmt(e, st)} ± ${fmtSd(s, st)}. Enter opens the team card.` });
+                          "aria-label": T(`${rk}. ${r.team}: estimate ${fmt(e, st)} ± ${fmtSd(s, st)}. Enter opens the team card.`, `第 ${rk} 名 ${r.team}：估計 ${fmt(e, st)} ± ${fmtSd(s, st)}。按 Enter 開啟球隊卡。`) });
       g.appendChild(el("rect", { class: "bg", x: 0, y, width: W, height: rowH, fill: i % 2 ? "var(--stripe)" : "transparent" }));
-      g.appendChild(el("text", { x: 4, y: cy + 4, "font-size": 11, fill: "var(--muted)" }, i + 1));
+      g.appendChild(el("text", { x: 4, y: cy + 4, "font-size": 11, fill: moved ? "var(--accent)" : "var(--muted)", "font-weight": moved ? 600 : 400 }, rk));
       g.appendChild(el("text", { x: narrow ? 22 : 28, y: cy + 5, "font-size": 14, "font-weight": 600, fill: "var(--fg)", "font-family": "var(--display)" }, r.team));
       if (state.band2) g.appendChild(el("line", { x1: X(e - 2 * s), x2: X(e + 2 * s), y1: cy, y2: cy, stroke: "var(--accent)", "stroke-width": 2, opacity: .4 }));
       g.appendChild(el("rect", { x: X(e - s), y: cy - 5, width: Math.max(1, X(e + s) - X(e - s)), height: 10, rx: 2, fill: "var(--accent)", opacity: .85 }));
@@ -345,7 +544,7 @@
       g.appendChild(el("rect", { x: X(e) - 2.5, y: cy - 7, width: 5, height: 14, fill: "var(--fg)", stroke: "var(--surface)", "stroke-width": 1 }));
       g.appendChild(el("text", { x: W - 4, y: cy + 4, "font-size": 12, fill: "var(--fg)", "text-anchor": "end", "font-variant-numeric": "tabular-nums" }, `${fmt(e, st)} ± ${fmtSd(s, st)}`));
       const open = () => { state.team = r.team; go("byteam"); };
-      g.addEventListener("mouseenter", () => showStatus(st, r, i + 1)); g.addEventListener("focus", () => showStatus(st, r, i + 1));
+      g.addEventListener("mouseenter", () => showStatus(st, r, rk)); g.addEventListener("focus", () => showStatus(st, r, rk));
       g.addEventListener("pointerdown", ev => { lastPointer = ev.pointerType; });
       // mouse: click opens the card (hover already shows the numbers); touch: first tap selects, second tap opens
       g.addEventListener("click", () => { if (lastPointer === "mouse" || state.team === r.team) open(); else select(r.team); lastPointer = "mouse"; });
@@ -354,8 +553,9 @@
     });
     svg.onmouseleave = () => showStatus(st);
     // league mean on top
-    svg.appendChild(el("line", { x1: X(st.league_mean), x2: X(st.league_mean), y1: top - 4, y2: H - 6, stroke: "var(--fg)", "stroke-dasharray": "3 3", "stroke-width": 1, "pointer-events": "none" }));
-    svg.setAttribute("aria-label", `${st.name}: estimate and uncertainty range for each team under the ${PRIOR_LABEL[state.prior]} prior, ${st.style ? "highest" : "best"} first.`);
+    svg.appendChild(el("line", { x1: X(baseline(st)), x2: X(baseline(st)), y1: top - 4, y2: H - 6, stroke: "var(--fg)", "stroke-dasharray": "3 3", "stroke-width": 1, "pointer-events": "none" }));
+    svg.setAttribute("aria-label", T(`${st.name}: estimate and uncertainty range for each team under the ${PL(state.prior)} prior, ${state.autosort ? "best first" : "in a fixed order; the number is the current rank"}.`,
+      `${st.name}：${PL(state.prior)}先驗下每隊的估計值與不確定區間，${state.autosort ? "由好到差排列" : "固定順序；數字為目前名次"}。`));
     showStatus(st);
   }
   let lastPointer = "mouse";
@@ -364,27 +564,37 @@
     document.querySelectorAll("#forest .row-hit").forEach(g => g.classList.toggle("sel", g.dataset.team === team));
     showStatus(S());
   }
+  // "TEAM card →" button at the end of a status bar
+  function cardButton(team) {
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "open";
+    btn.textContent = T(`${team} card →`, `${team} 球隊卡 →`);
+    btn.addEventListener("click", () => { state.team = team; go("byteam"); });
+    return btn;
+  }
   // Numbers for one team in the bar under the chart: the hovered row, else the selected team.
   function showStatus(st, r, rank) {
     const box = $("status");
     if (!r) {
       const rows = sortedRows(st), i = rows.findIndex(x => x.team === state.team);
-      if (i < 0) { box.textContent = "Hover over or tap a team to see its numbers. Click (or tap again) to open its card."; return; }
+      if (i < 0) { box.textContent = T("Hover over or tap a team to see its numbers. Click (or tap again) to open its card.", "滑鼠移到或點一下球隊可看數字；再點一次（或按一下滑鼠）開啟球隊卡。"); return; }
       r = rows[i]; rank = i + 1;
     }
     const prev = CUR; CUR = st;
     const e = est(r), s = sd(r);
     CUR = prev;
     box.innerHTML = "";
-    const b = document.createElement("b"); b.textContent = `${rank}. ${r.team}`;
+    const b = document.createElement("b"); b.textContent = T(`${rank}. ${r.team}`, `第 ${rank} 名 ${r.team}`);
     const t = document.createElement("span");
-    t.textContent = `${r.g} games · raw ${fmt(r.raw, st)} (sampling ± ${fmtSd(r.raw_sd, st)}) · last season ${fmt(r.last, st)} · estimate ${fmt(e, st)} ± ${fmtSd(s, st)}` +
-      ` → 68% range ${fmt(e - s, st)} to ${fmt(e + s, st)}, 95% ${fmt(e - 2 * s, st)} to ${fmt(e + 2 * s, st)}` +
-      (state.model === "season" ? ` · weight on this season ${(r[state.prior + " w"] || 0).toFixed(2)}` : "") +
-      (r.missing != null ? ` · mean talent missing ${r.missing.toFixed(1)} per 100 poss` : "");
-    const btn = document.createElement("button"); btn.type = "button"; btn.className = "open"; btn.textContent = `${r.team} card →`;
-    btn.addEventListener("click", () => { state.team = r.team; go("byteam"); });
-    box.append(b, t, btn);
+    t.textContent = ZH()
+      ? `${r.g} 場 · 本季 ${fmt(r.raw, st)}（抽樣 ± ${fmtSd(r.raw_sd, st)}）· 上季 ${fmt(r.last, st)} · 估計 ${fmt(e, st)} ± ${fmtSd(s, st)}` +
+        ` → 68% 區間 ${fmt(e - s, st)} 到 ${fmt(e + s, st)}，95% ${fmt(e - 2 * s, st)} 到 ${fmt(e + 2 * s, st)}` +
+        (state.model === "season" ? ` · 本季權重 ${(r[state.prior + " w"] || 0).toFixed(2)}` : "") +
+        (r.missing != null ? ` · 平均缺陣戰力 ${r.missing.toFixed(1)}（每 100 回合）` : "")
+      : `${r.g} games · raw ${fmt(r.raw, st)} (sampling ± ${fmtSd(r.raw_sd, st)}) · last season ${fmt(r.last, st)} · estimate ${fmt(e, st)} ± ${fmtSd(s, st)}` +
+        ` → 68% range ${fmt(e - s, st)} to ${fmt(e + s, st)}, 95% ${fmt(e - 2 * s, st)} to ${fmt(e + 2 * s, st)}` +
+        (state.model === "season" ? ` · weight on this season ${(r[state.prior + " w"] || 0).toFixed(2)}` : "") +
+        (r.missing != null ? ` · mean talent missing ${r.missing.toFixed(1)} per 100 poss` : "");
+    box.append(b, t, cardButton(r.team));
   }
 
   // ---------- view: funnel ----------
@@ -394,15 +604,19 @@
     const rows = st.rows.filter(r => r.raw != null && r.g > 0);
     const zOf = r => (r.raw - m) / se(r.g);
     const out95 = rows.filter(r => Math.abs(zOf(r)) > Z95).length, out998 = rows.filter(r => Math.abs(zOf(r)) > Z998).length;
-    const N = rows.length, read = out95 >= Math.max(3, 3 * 0.05 * N) ? "Many more than chance: the spread between teams is already real for this stat."
-      : out95 <= Math.max(1, 0.05 * N * 1.5) ? "About what chance gives: so far the spread between teams is mostly noise."
-      : "More than chance, but only a few teams separate from average.";
-    $("fsummary").innerHTML = `<b>${st.name}</b>: <b>${out95} of ${N}</b> teams ${out95 === 1 ? "is" : "are"} outside the 95% noise band (about ${(0.05 * N).toFixed(1)} if every team were average), ` +
-      `<b>${out998}</b> outside the 99.8% band (about ${(0.002 * N).toFixed(2)}). ${read} Single-game noise σ<sub>e</sub> = ${fmtSd(st.noise_sd, st)}${unitWord(st)}; k = ${fmtK(st.k, 1)} games.`;
+    const N = rows.length;
+    const read = out95 >= Math.max(3, 3 * 0.05 * N) ? T("Many more than chance: the spread between teams is already real for this stat.", "遠多於隨機：這項數據的球隊差距已經是真的。")
+      : out95 <= Math.max(1, 0.05 * N * 1.5) ? T("About what chance gives: so far the spread between teams is mostly noise.", "和隨機差不多：目前球隊之間的差距大多是雜訊。")
+      : T("More than chance, but only a few teams separate from average.", "多於隨機，但只有少數球隊和平均分得開。");
+    $("fsummary").innerHTML = T(
+      `<b>${st.name}</b>: <b>${out95} of ${N}</b> teams ${out95 === 1 ? "is" : "are"} outside the 95% noise band (about ${(0.05 * N).toFixed(1)} if every team were average), ` +
+      `<b>${out998}</b> outside the 99.8% band (about ${(0.002 * N).toFixed(2)}). ${read} Single-game noise σ<sub>e</sub> = ${fmtSd(st.noise_sd, st)}${unitWord(st)}; k = ${fmtK(st.k, 1)} games.`,
+      `<b>${st.name}</b>：${N} 隊中有 <b>${out95}</b> 隊落在 95% 雜訊帶外（如果每隊都是平均，約為 ${(0.05 * N).toFixed(1)} 隊），` +
+      `<b>${out998}</b> 隊落在 99.8% 帶外（約 ${(0.002 * N).toFixed(2)} 隊）。${read}單場雜訊 σ<sub>e</sub> = ${fmtSd(st.noise_sd, st)}${unitWord(st)}；k = ${fmtK(st.k, 1)} 場。`);
     const W = Math.max(320, svg.parentElement.clientWidth - 24), narrow = W < 560;
     const H = narrow ? 340 : 420, left = narrow ? 46 : 58, right = narrow ? 40 : 56, top = 12, bottom = 36;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H); svg.innerHTML = "";
-    if (st.noise_sd == null || !rows.length) { svg.appendChild(el("text", { x: 8, y: 20, fill: "var(--muted)", "font-size": 13 }, "No noise estimate for this stat.")); return; }
+    if (st.noise_sd == null || !rows.length) { svg.appendChild(el("text", { x: 8, y: 20, fill: "var(--muted)", "font-size": 13 }, T("No noise estimate for this stat.", "這項數據沒有雜訊估計。"))); return; }
     // x: games on a square-root scale (the band width is linear in 1/√n); y: raw value
     const NMAX = 82, X = n => left + (Math.sqrt(n) - 1) / (Math.sqrt(NMAX) - 1) * (W - left - right);
     const gMin = Math.min(...rows.map(r => r.g));
@@ -420,7 +634,7 @@
       svg.appendChild(el("line", { x1: X(n), x2: X(n), y1: top, y2: H - bottom, stroke: "var(--line)", "stroke-width": 1 }));
       svg.appendChild(el("text", { x: X(n), y: H - bottom + 15, "font-size": 11, fill: "var(--muted)", "text-anchor": "middle" }, n));
     });
-    svg.appendChild(el("text", { x: (left + W - right) / 2, y: H - 4, "font-size": 11.5, fill: "var(--muted)", "text-anchor": "middle" }, "games played (square-root scale)"));
+    svg.appendChild(el("text", { x: (left + W - right) / 2, y: H - 4, "font-size": 11.5, fill: "var(--muted)", "text-anchor": "middle" }, T("games played (square-root scale)", "已賽場數（平方根刻度）")));
     // noise bands, clipped to the plot area
     const clipId = "fclip";
     const defs = el("defs", {}), cp = el("clipPath", { id: clipId });
@@ -440,9 +654,11 @@
     const order = rows.slice().sort((a, b) => Math.abs(zOf(a)) - Math.abs(zOf(b)));  // outliers drawn last, on top
     const labels = [];
     order.forEach(r => {
-      const z = zOf(r), c = color(r), cx = X(r.g), cy = Y(r.raw), sel = r.team === state.team;
+      const z = zOf(r), c = color(r), cx = X(r.g), cy = Y(r.raw), sel = r.team === state.team, out = Math.abs(z) > Z95;
+      const dir = st.style ? T(z > 0 ? "higher" : "lower", z > 0 ? "高於" : "低於") : T(z * better(st) > 0 ? "better" : "worse", z * better(st) > 0 ? "優於" : "差於");
       const g = el("g", { class: "pt", tabindex: 0, role: "button", "data-team": r.team,
-                          "aria-label": `${r.team}: raw ${fmt(r.raw, st)} after ${r.g} games, ${Math.abs(z).toFixed(1)} noise SDs ${z * better(st) > 0 ? "better" : "worse"} than average${Math.abs(z) > Z95 ? ", outside the 95% band" : ""}. Enter opens the team card.` });
+                          "aria-label": T(`${r.team}: raw ${fmt(r.raw, st)} after ${r.g} games, ${Math.abs(z).toFixed(1)} noise SDs ${dir} than average${out ? ", outside the 95% band" : ""}. Enter opens the team card.`,
+                                          `${r.team}：${r.g} 場後本季 ${fmt(r.raw, st)}，${dir}平均 ${Math.abs(z).toFixed(1)} 個雜訊標準差${out ? "，在 95% 帶外" : ""}。按 Enter 開啟球隊卡。`) });
       g.appendChild(el("circle", { cx, cy, r: 11, fill: "transparent" }));  // larger touch target
       if (sel) g.appendChild(el("circle", { cx, cy, r: 9, fill: "none", stroke: "var(--fg)", "stroke-width": 1.5 }));
       g.appendChild(el("circle", { class: "dot", cx, cy, r: 5, fill: c || "var(--surface)", stroke: c || "var(--muted)", "stroke-width": 1.5 }));
@@ -466,32 +682,33 @@
       svg.appendChild(el("text", { x: lx, y: l.ly + 4, "font-size": 12.5, "font-weight": 600, "font-family": "var(--display)", fill: l.c, "pointer-events": "none" }, l.team));
     });
     svg.onmouseleave = () => showFunnelStatus(st);
-    svg.setAttribute("aria-label", `${st.name}: funnel plot of each team's raw value against games played, with 95% and 99.8% noise bands around the league average. ${out95} teams are outside the 95% band.`);
+    svg.setAttribute("aria-label", T(`${st.name}: funnel plot of each team's raw value against games played, with 95% and 99.8% noise bands around the league average. ${out95} teams are outside the 95% band.`,
+      `${st.name}：漏斗圖，各隊原始數值對已賽場數，並以聯盟平均為中心畫出 95% 與 99.8% 雜訊帶。${out95} 隊在 95% 帶外。`));
     showFunnelStatus(st);
   }
   function showFunnelStatus(st, r) {
     const box = $("fstatus");
     if (!r) r = st.rows.find(x => x.team === state.team && x.raw != null);
-    if (!r) { box.textContent = "Hover over or tap a team to see how far it is from average, in noise units. Click (or tap again) to open its card."; return; }
+    if (!r) { box.textContent = T("Hover over or tap a team to see how far it is from average, in noise units. Click (or tap again) to open its card.", "滑鼠移到或點一下球隊，看它離平均幾個雜訊單位；再點一次（或按一下滑鼠）開啟球隊卡。"); return; }
     const sdn = st.noise_sd / Math.sqrt(r.g), z = (r.raw - st.league_mean) / sdn, a = Math.abs(z);
     box.innerHTML = "";
     const b = document.createElement("b"); b.textContent = r.team;
     const t = document.createElement("span");
-    const where = a > Z998 ? "outside the 99.8% band" : a > Z95 ? "outside the 95% band" : "inside the 95% band";
-    t.textContent = `${r.g} games · raw ${fmt(r.raw, st)} · league avg ${fmt(st.league_mean, st, { plain: true })} · gap ${fmt(r.raw - st.league_mean, st, { signed: true })}${unitWord(st)}` +
-      ` = ${a.toFixed(1)} noise SDs (± ${fmtSd(sdn, st)} per SD at ${r.g} games) → ${where}`;
-    const btn = document.createElement("button"); btn.type = "button"; btn.className = "open"; btn.textContent = `${r.team} card →`;
-    btn.addEventListener("click", () => { state.team = r.team; go("byteam"); });
-    box.append(b, t, btn);
+    const where = a > Z998 ? T("outside the 99.8% band", "在 99.8% 帶外") : a > Z95 ? T("outside the 95% band", "在 95% 帶外") : T("inside the 95% band", "在 95% 帶內");
+    t.textContent = T(`${r.g} games · raw ${fmt(r.raw, st)} · league avg ${fmt(st.league_mean, st, { plain: true })} · gap ${fmt(r.raw - st.league_mean, st, { signed: true })}${unitWord(st)}` +
+      ` = ${a.toFixed(1)} noise SDs (± ${fmtSd(sdn, st)} per SD at ${r.g} games) → ${where}`,
+      `${r.g} 場 · 本季 ${fmt(r.raw, st)} · 聯盟平均 ${fmt(st.league_mean, st, { plain: true })} · 差距 ${fmt(r.raw - st.league_mean, st, { signed: true })}${unitWord(st)}` +
+      ` = ${a.toFixed(1)} 個雜訊標準差（${r.g} 場時每個標準差 ± ${fmtSd(sdn, st)}）→ ${where}`);
+    box.append(b, t, cardButton(r.team));
   }
   function legendFunnel() {
     const sw = (inner, w = 34) => `<svg width="${w}" height="14" aria-hidden="true">${inner}</svg>`;
     $("legend3").innerHTML =
-      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)"/>')} 95% noise band</span>` +
-      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)" opacity=".45"/>')} 99.8% noise band</span>` +
-      `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--fg)" stroke-dasharray="3 3"/>')} league avg this season</span>` +
-      `<span>${sw('<circle cx="17" cy="7" r="4.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.5"/>')} inside 95% band</span>` +
-      `<span>${sw('<circle cx="10" cy="7" r="4.5" fill="var(--good)"/><circle cx="24" cy="7" r="4.5" fill="var(--bad)"/>')} outside: better / worse</span>`;
+      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)"/>')} ${B("95% noise band", "95% 雜訊帶")}</span>` +
+      `<span>${sw('<rect x="2" y="2" width="30" height="10" rx="2" fill="var(--accent-soft)" opacity=".45"/>')} ${B("99.8% noise band", "99.8% 雜訊帶")}</span>` +
+      `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--fg)" stroke-dasharray="3 3"/>')} ${B("league avg this season", "本季聯盟平均")}</span>` +
+      `<span>${sw('<circle cx="17" cy="7" r="4.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.5"/>')} ${B("inside 95% band", "在 95% 帶內")}</span>` +
+      `<span>${sw('<circle cx="10" cy="7" r="4.5" fill="var(--good)"/><circle cx="24" cy="7" r="4.5" fill="var(--bad)"/>')} ${B("outside: better / worse", "帶外：較好／較差")}</span>`;
   }
 
   // ---------- view: by team ----------
@@ -500,25 +717,26 @@
     state.team = team; $("team").value = team;
     const any = DATA.stats[0].rows.find(r => r.team === team);
     $("teamName").textContent = team;
-    $("teamSub").textContent = `${any.g} games` + (any.cont != null ? ` · returning minutes ${(any.cont * 100).toFixed(0)}%` : "") +
-      (any.missing != null ? ` · mean talent missing ${any.missing.toFixed(1)} per 100 poss` : "") + ` · ${MODELS.find(m => m[0] === state.model)[1]}, ${PRIOR_LABEL[state.prior]} prior`;
+    const cont = any.cont != null ? (any.cont * 100).toFixed(0) : null, miss = any.missing != null ? any.missing.toFixed(1) : null;
+    $("teamSub").innerHTML = B(`${any.g} games` + (cont ? ` · returning minutes ${cont}%` : "") + (miss ? ` · avg talent missing ${miss} per 100 poss` : "") + ` · ${MODELS.find(m => m[0] === state.model)[1]}, ${PRIOR_EN[state.prior]} prior`,
+                               `${any.g} 場` + (cont ? ` · 回鍋分鐘 ${cont}%` : "") + (miss ? ` · 平均缺陣戰力 ${miss}（每 100 回合）` : "") + ` · ${MODELS.find(m => m[0] === state.model)[2]}，${PRIOR_ZH[state.prior]}先驗`);
     const card = $("teamCard");
-    card.innerHTML = `<div class="hd">stat</div><div class="hd plotcell">position among ${NTEAMS} teams</div><div class="hd val">estimate ± SD</div><div class="hd">read</div>`;
+    card.innerHTML = `<div class="hd">${B("stat", "數據")}</div><div class="hd plotcell">${B(`where it sits among ${NTEAMS} teams`, `在 ${NTEAMS} 隊中的位置`)}</div><div class="hd val">${B("estimate ± SD", "估計值 ± SD")}</div><div class="hd">${B("read", "判讀")}</div>`;
     const plots = [];
     DATA.stats.forEach((st, si) => {
       CUR = st;
       const r = st.rows.find(r => r.team === team); if (!r || est(r) == null) { CUR = null; return; }
       const rk = sortedRows(st).findIndex(x => x.team === team) + 1, v = verdict(st, r);
       const c1 = document.createElement("div"); c1.className = "stat"; c1.tabIndex = 0;
-      c1.innerHTML = `${st.name}<small>${st.style ? "style" : ord(rk) + " of " + NTEAMS} · k ${fmtK(st.k, 0)}</small>`;
+      c1.innerHTML = `${st.name}<small>${B(`${st.style ? "style" : ordEn(rk) + " of " + NTEAMS} · k ${fmtK(st.k, 0)}`, `${st.style ? "風格" : `第 ${rk} 名`} · k ${fmtK(st.k, 0)}`)}</small>`;
       c1.addEventListener("click", () => { state.stat = si; go("bystat"); });
       c1.addEventListener("keydown", ev => { if (ev.key === "Enter") { state.stat = si; go("bystat"); } });
       const c2 = document.createElement("div"); c2.className = "plotcell";
-      const svg = el("svg", { class: "mini", role: "img", "aria-label": `${team} ${st.name}: ${fmt(est(r), st)} ± ${fmtSd(sd(r), st)}, ${v.txt}` });
+      const svg = el("svg", { class: "mini", role: "img", "aria-label": `${team} ${st.name}${T(": ", "：")}${fmt(est(r), st)} ± ${fmtSd(sd(r), st)}${T(", ", "，")}${v.txt}` });
       c2.appendChild(svg); plots.push([svg, st, r]);
       const c3 = document.createElement("div"); c3.className = "val";
-      c3.innerHTML = `${fmt(est(r), st)} ± ${fmtSd(sd(r), st)}<small>raw ${fmt(r.raw, st)} · last ${fmt(r.last, st)}</small>`;
-      const c4 = document.createElement("div"); c4.innerHTML = `<span class="chip ${v.cls}">${v.txt}</span>`;
+      c3.innerHTML = `${fmt(est(r), st)} ± ${fmtSd(sd(r), st)}<small>${B(`raw ${fmt(r.raw, st)} · last ${fmt(r.last, st)}`, `本季 ${fmt(r.raw, st)} · 上季 ${fmt(r.last, st)}`)}</small>`;
+      const c4 = document.createElement("div"); c4.innerHTML = `<span class="chip ${v.cls}">${B(v.en, v.zh)}</span>`;
       card.append(c1, c2, c3, c4);
       CUR = null;
     });
@@ -528,14 +746,14 @@
     const W = Math.max(120, svg.clientWidth || svg.parentElement.clientWidth), H = 26, cy = 13;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
     const rows = st.rows.filter(x => est(x) != null);
-    const [lo, hi] = domain(st, rows);
+    const [lo, hi] = domain(st);
     const X = v => 4 + (v - lo) / (hi - lo) * (W - 8);
     svg.appendChild(el("line", { x1: 4, x2: W - 4, y1: cy, y2: cy, stroke: "var(--line)", "stroke-width": 1 }));
     rows.forEach(x => { if (x.team !== r.team) svg.appendChild(el("line", { x1: X(est(x)), x2: X(est(x)), y1: cy - 5, y2: cy + 5, stroke: "var(--muted)", "stroke-width": 1, opacity: .45 })); });
     const e = est(r), s = sd(r);
     if (state.band2) svg.appendChild(el("line", { x1: X(e - 2 * s), x2: X(e + 2 * s), y1: cy, y2: cy, stroke: "var(--accent)", "stroke-width": 2, opacity: .45 }));
     svg.appendChild(el("rect", { x: X(e - s), y: cy - 5, width: Math.max(1, X(e + s) - X(e - s)), height: 10, rx: 2, fill: "var(--accent)", opacity: .85 }));
-    svg.appendChild(el("line", { x1: X(st.league_mean), x2: X(st.league_mean), y1: 1, y2: H - 1, stroke: "var(--fg)", "stroke-dasharray": "2 2" }));
+    svg.appendChild(el("line", { x1: X(baseline(st)), x2: X(baseline(st)), y1: 1, y2: H - 1, stroke: "var(--fg)", "stroke-dasharray": "2 2" }));
     if (r.last != null) svg.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--muted)", "stroke-width": 2 }));
     svg.appendChild(el("circle", { cx: X(r.raw), cy, r: 3.5, fill: "var(--surface)", stroke: "var(--raw)", "stroke-width": 2 }));
     svg.appendChild(el("rect", { x: X(e) - 2, y: cy - 7, width: 4, height: 14, fill: "var(--fg)" }));
@@ -545,24 +763,25 @@
   function drawTable() {
     const st = S();
     const cols = [
-      { key: "team", label: "Team", text: true }, { key: "g", label: "G", int: true },
-      { key: "raw", label: "Raw" }, { key: "raw_sd", label: "±", sd: true }, { key: "raw_rk", label: "rk", rk: true },
-      { key: "last", label: DATA.last }, { key: "delta", label: "Δ vs lg", signed: true }, { key: "z", label: "z", z: true },
+      { key: "team", label: B("Team", "球隊"), text: true }, { key: "g", label: B("G", "場"), int: true },
+      { key: "raw", label: B("Raw", "本季") }, { key: "raw_sd", label: "±", sd: true }, { key: "raw_rk", label: B("rk", "名次"), rk: true },
+      { key: "last", label: DATA.last }, { key: "delta", label: B("Δ vs lg", "Δ 相對聯盟"), signed: true }, { key: "z", label: "z", z: true },
     ];
-    if (DATA.has_cont) cols.push({ key: "cont", label: "ret. min", pct0: true }, { key: "K_cont", label: "K", int: true });
-    if (DATA.has_full && hasFull(st)) cols.splice(DATA.has_cont ? 10 : 8, 0, { key: "missing", label: "missing", one: true });
+    if (DATA.has_cont) cols.push({ key: "cont", label: B("ret. min", "回鍋分鐘"), pct0: true }, { key: "K_cont", label: "K", int: true });
+    if (DATA.has_full && hasFull(st)) cols.splice(DATA.has_cont ? 10 : 8, 0, { key: "missing", label: B("missing", "缺陣"), one: true });
     const groups = [["", cols.length]];
     const x = sfx(st);
-    priorNames.forEach(nm => { cols.push({ key: nm + x, label: "est", prior: nm }, { key: nm + x + " sd", label: "±", sd: true, prior: nm }, { key: "__rk " + nm, label: "rk", rk: true, prior: nm }); groups.push([PRIOR_LABEL[nm] || nm, 3, nm]); });
+    priorNames.forEach(nm => { cols.push({ key: nm + x, label: B("est", "估計"), prior: nm }, { key: nm + x + " sd", label: "±", sd: true, prior: nm }, { key: "__rk " + nm, label: B("rk", "名次"), rk: true, prior: nm }); groups.push([PLB(nm), 3, nm]); });
     // client-side ranks under the chosen model, for each prior
     const rowsAug = st.rows.map(r => Object.assign({}, r));
     priorNames.forEach(nm => { sortedRows(st, nm).forEach((r, i) => { rowsAug.find(a => a.team === r.team)["__rk " + nm] = i + 1; }); });
-    if (!state.sortKey || !cols.some(c => c.key === state.sortKey)) { state.sortKey = "__rk " + state.prior; state.sortDir = 1; }
+    const frozenOrder = !state.autosort && !state.sortKey;
+    if (!frozenOrder && (!state.sortKey || !cols.some(c => c.key === state.sortKey))) { state.sortKey = "__rk " + state.prior; state.sortDir = 1; }
     const thead = $("tbl").querySelector("thead");
     thead.innerHTML = `<tr class="grp">${groups.map(([t, n, nm]) => `<th colspan="${n}" style="${nm === state.prior ? "color:var(--accent)" : ""}">${t}</th>`).join("")}</tr>`;
     const tr = document.createElement("tr");
     cols.forEach(c => {
-      const th = document.createElement("th"); th.textContent = c.label; th.tabIndex = 0;
+      const th = document.createElement("th"); th.innerHTML = c.label; th.tabIndex = 0;
       if (c.key === state.sortKey) th.setAttribute("aria-sort", state.sortDir > 0 ? "ascending" : "descending");
       const sortBy = () => { if (state.sortKey === c.key) state.sortDir = -state.sortDir; else { state.sortKey = c.key; state.sortDir = c.rk || c.text ? 1 : -1; } save(); drawTable(); };
       th.addEventListener("click", sortBy); th.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); sortBy(); } });
@@ -570,7 +789,8 @@
     });
     thead.appendChild(tr);
     const col = cols.find(c => c.key === state.sortKey);
-    const rows = rowsAug.sort((a, b) => {
+    const fpos = frozenOrder ? new Map(displayRows(st).map((r, i) => [r.team, i])) : null;
+    const rows = frozenOrder ? rowsAug.sort((a, b) => (fpos.get(a.team) ?? 99) - (fpos.get(b.team) ?? 99)) : rowsAug.sort((a, b) => {
       const x = a[state.sortKey], y = b[state.sortKey];
       if (col.text) return state.sortDir * String(x).localeCompare(String(y));
       const nx = x == null ? Infinity * state.sortDir : x, ny = y == null ? Infinity * state.sortDir : y;
@@ -596,16 +816,32 @@
 
   // ---------- routing ----------
   const VIEWS = ["bystat", "funnel", "byteam", "table"];
+  function applyLang() {
+    const m = document.querySelector("main");
+    m.dataset.lang = state.lang; m.lang = ZH() ? "zh-Hant" : "en";
+    m.style.setProperty("--sel-label", ZH() ? '" · 目前選擇"' : '" · selected"');
+    document.querySelectorAll("#langSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === state.lang ? "true" : "false"));
+    $("autosort").title = T("On: teams re-rank whenever the model, prior or stat changes. Off: the order is frozen, so you can watch each range move.",
+                            "開：切換模型、先驗或數據時重新排名。關：固定順序，方便觀察每個區間如何移動。");
+    const fb = document.querySelector('#modelSeg button[data-model="full"]');
+    if (fb) fb.title = DATA.has_full ? "" : T("needs player minutes for this season", "需要本季球員上場時間");
+    const lab = { stat: ["About this stat", "關於這項數據"], model: ["About the models", "關於模型"], prior: ["About the priors", "關於先驗"] };
+    document.querySelectorAll("button.info").forEach(b => b.setAttribute("aria-label", T(...lab[b.dataset.pop])));
+    document.querySelector("nav.tabs").setAttribute("aria-label", T("Views", "檢視"));
+    $("themeSeg").setAttribute("aria-label", T("Theme", "外觀")); $("langSeg").setAttribute("aria-label", T("Language", "語言"));
+  }
   function render() {
+    applyLang();
     VIEWS.forEach(v => { $("v-" + v).hidden = v !== state.view; });
     document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.view === state.view ? "page" : "false"));
     $("statCtl").hidden = state.view === "byteam"; $("teamCtl").hidden = state.view !== "byteam";
     const funnel = state.view === "funnel";  // raw data only: model and prior do not apply
-    ["modelCtl", "priorCtl", "band2Ctl", "modelNote", "priorNote"].forEach(id => { $(id).hidden = funnel; });
+    ["modelCtl", "priorCtl", "band2Ctl"].forEach(id => { $(id).hidden = funnel; });
     $("stat").value = state.stat; $("band2").checked = state.band2;
+    $("autosort").setAttribute("aria-pressed", state.autosort ? "true" : "false"); $("autosort").hidden = state.view === "byteam" || funnel;
     document.querySelectorAll("#priorSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.prior === state.prior ? "true" : "false"));
     document.querySelectorAll("#modelSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.model === state.model ? "true" : "false"));
-    modelNote(); priorNote(); legend("legend"); legend("legend2"); legendFunnel();
+    reserveSummary(); summary(); refreshPop(); legend("legend"); legend("legend2"); legendFunnel();
     if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
     save();
   }
@@ -615,24 +851,28 @@
 
   $("stat").addEventListener("change", () => { state.stat = +$("stat").value; state.sortKey = null; render(); });
   $("team").addEventListener("change", () => { state.team = $("team").value; render(); });
-  const stepStat = d => { state.stat = (state.stat + d + DATA.stats.length) % DATA.stats.length; state.sortKey = null; render(); };
+  const stepStat = d => { state.stat = (state.stat + d + DATA.stats.length) % DATA.stats.length; if (state.autosort) state.sortKey = null; render(); };
   const stepTeam = d => { const i = DATA.teams.indexOf(state.team); state.team = DATA.teams[(i + d + NTEAMS) % NTEAMS]; render(); };
   $("statCtl").addEventListener("click", ev => { const b = ev.target.closest(".step"); if (b) stepStat(+b.dataset.step); });
   $("teamCtl").addEventListener("click", ev => { const b = ev.target.closest(".step"); if (b) stepTeam(+b.dataset.step); });
-  // ← / → step through stats (By stat, Table) or teams (By team) unless a form control has the focus
+  // ← / → step through stats (By stat, Funnel, Table) or teams (By team) unless a form control has the focus
   document.addEventListener("keydown", ev => {
     if (ev.altKey || ev.ctrlKey || ev.metaKey || !["ArrowLeft", "ArrowRight"].includes(ev.key)) return;
     if (ev.target.closest && ev.target.closest("select, input, textarea")) return;
     const d = ev.key === "ArrowLeft" ? -1 : 1;
     if (state.view === "byteam") stepTeam(d); else stepStat(d);
   });
+  $("themeSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.theme = b.dataset.themePick; applyTheme(); save(); });
+  $("langSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.lang = b.dataset.lang; render(); });
+  $("autosort").addEventListener("click", () => { state.autosort = !state.autosort; FROZEN = {}; state.sortKey = null; render(); });
   $("band2").addEventListener("change", () => { state.band2 = $("band2").checked; render(); });
-  $("modelSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b || b.disabled) return; state.model = b.dataset.model; state.sortKey = null; render(); });
-  $("priorSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.prior = b.dataset.prior; state.sortKey = null; render(); });
+  $("modelSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b || b.disabled) return; state.model = b.dataset.model; if (state.autosort) state.sortKey = null; render(); });
+  $("priorSeg").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.prior = b.dataset.prior; if (state.autosort) state.sortKey = null; render(); });
   // draw again only when the width changes (a height change comes from the drawing itself)
   let rt, lastW = 0;
   new ResizeObserver(([e]) => { const w = Math.round(e.contentRect.width); if (w === lastW) return; lastW = w; clearTimeout(rt); rt = setTimeout(() => { if (state.view !== "table") render(); }, 120); }).observe(document.querySelector("main"));
   render();
+  if (document.fonts) document.fonts.ready.then(() => { reservedW = -1; render(); });  // measure again when the web fonts are loaded
   }
 })();
 </script>

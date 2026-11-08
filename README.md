@@ -34,8 +34,9 @@ games played), `through` (date of the last game), `teams`, `k_seasons`,
 `has_cont`, `has_full`, `stats`.
 
 Each entry of `stats`: `name`, `unit` (`pct` or `pts`), `k`, `noise_sd`, `true_sd`,
-`league_mean`, `league_mean_last`, `lower_is_better`, `style`, `q_ratio`, `beta`,
-`priors` (`name`, `k`, `note`, `weight`) and `rows`.
+`league_mean`, `league_mean_last`, `league_mean_full` (league average at full
+strength, or null), `lower_is_better`, `style`, `q_ratio`, `beta`, `priors`
+(`name`, `k`, `note`, `note_zh` (Traditional Chinese), `weight`) and `rows`.
 
 Each row: `team`, `g`, `raw`, `raw_sd`, `raw_rk`, `last`, `delta`, `z`, `cont`,
 `K_cont`, `missing`, and for each prior `P`: `P`, `P sd`, `P w`, `P rk`,
