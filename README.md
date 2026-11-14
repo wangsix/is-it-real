@@ -9,7 +9,7 @@ Planned home: repository `wangsix/is-it-real`, served by GitHub Pages at
 
 | file | what it is |
 |---|---|
-| `index.html` | the rank page (Overview, By stat, Funnel, By team, Table).  Loads `data/ratings.json` |
+| `index.html` | the rank page (Overview, By stat, Funnel, By team, Table, Players).  Loads `data/ratings.json` |
 | `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
 | `build.py` | makes one self-contained file with the data inlined (stdlib only) |
 | `data/ratings.json` | generated; not in git |
@@ -31,7 +31,7 @@ the single-file build.
 
 Top level: `schema_version`, `season`, `last` (season labels), `games` ([min, max]
 games played), `through` (date of the last game), `teams`, `k_seasons`,
-`has_cont`, `has_full`, `stats`.
+`has_cont`, `has_full`, `stats`, and optionally `players`.
 
 Each entry of `stats`: `name`, `unit` (`pct` or `pts`), `k`, `noise_sd`, `true_sd`,
 `league_mean`, `league_mean_last`, `league_mean_full` (league average at full
@@ -42,10 +42,22 @@ Each row: `team`, `g`, `raw`, `raw_sd`, `raw_rk`, `last`, `delta`, `z`, `cont`,
 `K_cont`, `missing`, and for each prior `P`: `P`, `P sd`, `P w`, `P rk`,
 `P form`, `P form sd`, `P full`, `P full sd`, `P mean` (the prior's own value, i.e. the
 pre-season expectation; the season estimate is `P w`·`raw` + (1 − `P w`)·`P mean`).  A stat
-with `opp_adjusted` (Net Rtg) also has `P opp`, `P form opp`, `P full opp`: the part of
-`P`, `P form`, `P full` that comes from the opponents' strength, already included in them
+with `opp_adjusted` (Net Rtg, Pace) also has `P opp`, `P form opp`, `P full opp`: the part of
+`P`, `P form`, `P full` that comes from the opponents' level, already included in them
 (so for that stat the season estimate is the formula above plus `P opp`).  A missing
 or non-finite number is `null`.
+
+`players` (missing when the player files are not there; the page then hides the Players
+tab): `through`, `fit_seasons` ([first, last] season the model is fitted on), `cols` and
+`stats`.  Each entry of `players.stats`: `name`, `unit` (the opportunity n is counted in:
+`games`, `min`, `FGA`, …), `k` (in that unit), `r` (season-to-season correlation of the true
+level), `true_sd`, `drift_sd`, `shift` (league-wide change, already taken out of every `ch`)
+and `rows`.  A row is a list in the order of `cols`: `id`, `player`, `team`, `age`, `last`,
+`now` (last season, this season so far), `n` (this season's opportunities), `z`, `est`, `sd`
+(expected level for the rest of the season ± SD), `ch`, `ch_sd` (true change from last
+season ± SD) and `p` (probability that the direction of `ch` is right, rounded down to 4
+decimals).  Values are in display units (per 36 minutes, percent); rows are sorted by `p`,
+highest first.
 
 Change `SCHEMA_VERSION` in `nba_stabilization/export.py` and `SCHEMA` in
 `index.html` together when a key is removed or changes meaning.  The page shows an
@@ -80,6 +92,11 @@ Done: **Funnel** view.  Each team's raw value against games played (√ scale), 
 95% and 99.8% noise bands (league average ± z·σ_e/√n) and a count of teams outside
 the bands against the count that chance gives.  It uses the current data contract.
 
+Done: **Players** view.  Which player changes from last season are real: one row per
+player and stat with last season, this season so far, the estimate with its 68% and 95%
+range, Δ ± SD and p; filters by stat, team and name, and a count on the Overview.  Uses the
+`players` block.
+
 Next, in this order:
 
 1. **Fan chart per team** (By team view).  The raw season-to-date value, the
@@ -99,7 +116,7 @@ Next, in this order:
 Tested and dropped (see the main README):
 
 - **Home/away term.**  No measurable gain in 2016–2025.  (The opponent term is on
-  the page for Net Rtg: 1 to 2 % lower squared error.  The older oracle adjustment at
+  the page for Net Rtg, 1 to 2 % lower squared error, and for Pace, 3 to 6 %.  The older oracle adjustment at
   full weight showed no gain.)
 - **Luck-adjusted ratings** (opponents' 3PT% and FT% set to the league average).
   They predict the rest of the season worse than the raw ratings at all N.

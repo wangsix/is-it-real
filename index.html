@@ -5,7 +5,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-  /* Layout: header + control bar, then one of four views: interval chart per stat, funnel plot, team card, sortable table. */
+  /* Layout: header + control bar, then one view: overview, interval chart per stat, funnel plot, team card, sortable table, player changes. */
   /* Colour roles: teal is reserved for the estimate (data); selected controls use ink (--ui-sel);
      better / worse also carry a shape (triangle, ▲▼), not only green / red. */
   :root {
@@ -200,9 +200,7 @@
   .scard p b { color: var(--fg); font-weight: 600; }
   .scard .chip { margin-left: 6px; vertical-align: 1px; }
   .ov .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  .ov .btn { font: inherit; font-size: 14px; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
-  .ov .btn:hover { background: var(--accent); color: var(--surface); }
-  .ov .legend { margin-bottom: 8px; }
+    .ov .legend { margin-bottom: 8px; }
   @media (max-width: 620px) {
     .ov h2 { font-size: 26px; }
     nav.tabs { overflow-x: auto; scrollbar-width: none; }
@@ -213,6 +211,31 @@
     .scard { grid-template-columns: minmax(0, 1fr); }
     .scard .who { display: flex; gap: 8px; align-items: baseline; }
     .scard .who b { display: inline; }
+  }
+  /* players: one row per player and stat; each row is its own grid so that a phone can stack it */
+  input[type=search] { font: inherit; font-size: 14px; padding: 5px 9px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); width: 150px; }
+  #v-players .summary { margin: 10px 0 4px; }
+  #v-players .legend { margin: 8px 0 2px; }
+  .prow { display: grid; grid-template-columns: minmax(120px, 200px) 92px minmax(0, 1fr) 124px 132px; grid-template-areas: "who stat plot val read";
+          gap: 0 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .prow > .who { grid-area: who; min-width: 0; } .prow > .stat { grid-area: stat; } .prow > .plot { grid-area: plot; min-width: 0; }
+  .prow > .val { grid-area: val; } .prow > .read { grid-area: read; }
+  .prow.hd { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .prow .who button { font: inherit; font-family: var(--label); font-size: 16px; font-weight: 600; letter-spacing: .01em; color: var(--fg); background: none; border: 0; padding: 0;
+                      cursor: pointer; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  .prow .who button:hover { color: var(--accent); }
+  .prow small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; font-family: var(--body); letter-spacing: 0; }
+  .prow:not(.hd) .stat { font-family: var(--label); font-size: 15.5px; font-weight: 600; letter-spacing: .01em; }
+  .prow .val, .prow .read { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pmore { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+  .pmore:empty { display: none; }
+  .ov .btn, .pmore .btn { font: inherit; font-size: 14px; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
+  .ov .btn:hover, .pmore .btn:hover { background: var(--accent); color: var(--surface); }
+  @media (max-width: 620px) {
+    .prow { grid-template-columns: minmax(0, 1fr) max-content; grid-template-areas: "who read" "stat val" "plot plot"; gap: 2px 10px; padding: 7px 0; }
+    .prow.hd { display: none; }
+    .prow .stat small { display: inline; margin-left: 6px; }
+    input[type=search] { width: 120px; }
   }
   @media (prefers-reduced-motion: no-preference) { .seg button, nav.tabs a { transition: background .15s, color .15s; } }
 </style>
@@ -234,6 +257,7 @@
     <a href="#funnel" data-view="funnel"><span class="bi"><span lang="en">Funnel</span><span lang="zh-Hant">漏斗圖</span></span></a>
     <a href="#byteam" data-view="byteam"><span class="bi"><span lang="en">By team</span><span lang="zh-Hant">依球隊</span></span></a>
     <a href="#table" data-view="table"><span class="bi"><span lang="en">Table</span><span lang="zh-Hant">表格</span></span></a>
+    <a href="#players" data-view="players"><span class="bi"><span lang="en">Players</span><span lang="zh-Hant">球員</span></span></a>
   </nav>
 
   <!-- ===== overview ===== -->
@@ -242,6 +266,7 @@
     <div><h3 id="ovMeterHead"></h3><p class="hint" id="ovMeterHint"></p><div class="meters" id="ovMeters"></div></div>
     <div id="ovSurprises"></div>
     <div id="ovMine"></div>
+    <div id="ovPlayers"></div>
     <p class="note" id="ovFoot"></p>
   </section>
 
@@ -286,6 +311,22 @@
     <p class="note bi blk" style="margin-top:8px"><span lang="en">± is one standard deviation of the team's true level under that prior: the true value is within estimate ± SD about 68% of the time. Δ is the change since last season relative to the league (the league-wide shift is removed), and z is Δ in units of sampling noise. Click a header to sort; click again to reverse. Click a team to open its card.</span><span lang="zh-Hant">± 是該先驗下球隊真實水準的一個標準差：約 68% 的機率真實值落在估計 ± SD 之內。Δ 是相對於聯盟的季間變化（已扣除全聯盟的整體變動），z 是 Δ 除以抽樣雜訊。點欄位標題排序，再點一次反向。點球隊開啟球隊卡。</span></p>
   </section>
 
+  <!-- ===== players: which changes from last season are real ===== -->
+  <section id="v-players" class="panel" hidden>
+    <div class="controls">
+      <div class="ctl"><span><span class="bi"><span lang="en">Stat</span><span lang="zh-Hant">數據</span></span></span><select id="pStat" aria-label="Stat"></select></div>
+      <div class="ctl"><span><span class="bi"><span lang="en">Team</span><span lang="zh-Hant">球隊</span></span></span><select id="pTeam" aria-label="Team"></select></div>
+      <div class="ctl"><span><span class="bi"><span lang="en">Player</span><span lang="zh-Hant">球員</span></span></span><input type="search" id="pQuery" autocomplete="off" spellcheck="false" aria-label="Player name"></div>
+      <div class="seg" id="pShow" role="group" aria-label="Show"><button type="button" data-show="real"><span class="bi"><span lang="en">Likely real</span><span lang="zh-Hant">應屬真實</span></span></button><button type="button" data-show="all"><span class="bi"><span lang="en">All</span><span lang="zh-Hant">全部</span></span></button></div>
+    </div>
+    <p class="summary" id="pSummary" aria-live="polite"></p>
+    <p class="note" id="pStatNote" style="margin:0"></p>
+    <div class="legend" id="legend4"></div>
+    <div id="pList"></div>
+    <div class="pmore" id="pMore"></div>
+    <p class="note" id="pNote" style="margin-top:10px"></p>
+  </section>
+
   <p class="note bi blk" id="srcNote"></p>
 </main>
 
@@ -316,7 +357,7 @@
   const priorNames = DATA.stats[0].priors.map(p => p.name);
   const MODELS = [["season", "Season average", "季平均"], ["form", "Current form", "近況"], ["full", "Full strength", "完整戰力"]];
   const defaultLang = /^zh/i.test(navigator.language || "") ? "zh" : "en";
-  let state = { theme: "auto", lang: defaultLang, view: "overview", model: "form", stat: 0, team: null, prior: priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1], band2: true, autosort: true, sortKey: null, sortDir: 1 };
+  let state = { theme: "auto", lang: defaultLang, view: "overview", model: "form", stat: 0, team: null, prior: priorNames.includes("continuity-adjusted") ? "continuity-adjusted" : priorNames[priorNames.length - 1], band2: true, autosort: true, sortKey: null, sortDir: 1, pstat: "all", pteam: "all", pq: "", preal: true };
   try { const s = JSON.parse(localStorage.getItem("shrunk-ratings") || "null"); if (s) state = Object.assign(state, s); } catch (e) {}
   if (!(state.stat < DATA.stats.length)) state.stat = 0;
   if (!priorNames.includes(state.prior)) state.prior = priorNames[priorNames.length - 1];
@@ -515,7 +556,8 @@
   function popHTML(kind) {
     const st = S(), item = (cur, dt, dd) => `<div class="${cur ? "cur" : ""}"><dt>${dt}</dt><dd>${dd}</dd></div>`;
     const lm = fmt(st.league_mean, st, { plain: true }), ll = fmt(st.league_mean_last, st, { plain: true });
-    const oppNote = st.opp_adjusted ? `<p>${T("The estimates count each game against the opponent's own estimated level, so a result against a strong team is worth more. Raw is not adjusted. In back-tests on 2016–2025 this lowered the squared error by 1 to 2%; a home/away term did not help.", "估計值把每場比賽依對手的估計水準調整，所以對強隊的戰績更有份量。「本季」原始值不調整。2016–2025 的回測中，這讓平方誤差降低 1 到 2%；主客場修正則沒有幫助。")}</p>` : "";
+    const oppNote = st.opp_adjusted && st.name === "Pace" ? `<p>${T("Pace is one number per game that both teams make together. The estimates count each game against the opponent's own estimated pace, so a fast game against a fast team says less about this team. Raw is not adjusted. In back-tests on 2016–2025 this lowered the squared error by 3 to 6%.", "節奏是每場比賽兩隊一起打出來的同一個數字。估計值把每場比賽依對手自己的估計節奏調整，所以對上快節奏球隊打出的快節奏，比較不能說明這支球隊本身。「本季」原始值不調整。2016–2025 的回測中，這讓平方誤差降低 3 到 6%。")}</p>`
+      : st.opp_adjusted ? `<p>${T("The estimates count each game against the opponent's own estimated level, so a result against a strong team is worth more. Raw is not adjusted. In back-tests on 2016–2025 this lowered the squared error by 1 to 2%; a home/away term did not help.", "估計值把每場比賽依對手的估計水準調整，所以對強隊的戰績更有份量。「本季」原始值不調整。2016–2025 的回測中，這讓平方誤差降低 1 到 2%；主客場修正則沒有幫助。")}</p>` : "";
     if (kind === "stat") return `<h3>${st.name}</h3>${STAT_DEF[st.name] ? `<p>${T(...STAT_DEF[st.name])}</p>` : ""}${oppNote}<dl>` +
       item(false, T(`k = ${fmtK(st.k, 1)} games`, `k = ${fmtK(st.k, 1)} 場`), T(`After k games this stat is half signal, half noise; the smaller k, the sooner it can be trusted. Formally k = noise variance ÷ variance of true levels, and reliability after n games = n/(n+k).`, `打滿 k 場後，這項數據一半是訊號、一半是雜訊；k 越小，越早可以相信。正式定義：k = 雜訊變異 ÷ 真實水準變異，n 場後的信度 = n/(n+k)。`)) +
       item(false, T(`single-game noise σ<sub>e</sub> = `, `單場雜訊 σ<sub>e</sub> = `) + fmtSd(st.noise_sd, st) + unitWord(st), T(`How much one game's value scatters around the team's true level.`, `單場數值圍繞球隊真實水準的離散程度。`)) +
@@ -676,7 +718,7 @@
       ? `${r.g} 場 · 本季 ${fmt(r.raw, st)}（抽樣 ± ${fmtSd(r.raw_sd, st)}）· 上季 ${fmt(r.last, st)} · 估計 ${fmt(e, st)} ± ${fmtSd(s, st)}` +
         ` → 68% 區間 ${fmt(e - s, st)} 到 ${fmt(e + s, st)}，95% ${fmt(e - 2 * s, st)} 到 ${fmt(e + 2 * s, st)}` +
         (state.model === "season" ? ` · 本季權重 ${(r[state.prior + " w"] || 0).toFixed(2)}` : "") +
-        (o != null ? ` · 其中對手強度 ${fmt(o, st, { signed: true })}` : "") +
+        (o != null ? ` · 其中對手${st.name === "Pace" ? "節奏" : "強度"} ${fmt(o, st, { signed: true })}` : "") +
         (r.missing != null ? ` · 平均缺陣戰力 ${r.missing.toFixed(1)}（每 100 回合）` : "")
       : `${r.g} games · raw ${fmt(r.raw, st)} (sampling ± ${fmtSd(r.raw_sd, st)}) · last season ${fmt(r.last, st)} · estimate ${fmt(e, st)} ± ${fmtSd(s, st)}` +
         ` → 68% range ${fmt(e - s, st)} to ${fmt(e + s, st)}, 95% ${fmt(e - 2 * s, st)} to ${fmt(e + 2 * s, st)}` +
@@ -1042,13 +1084,173 @@
     $("ovTeam").addEventListener("change", ev => { state.team = ev.target.value; render(); });
     $("ovCardBtn").addEventListener("click", () => { state.team = $("ovTeam").value; go("byteam"); });
     $("ovAllBtn").addEventListener("click", () => { state.stat = DATA.stats.indexOf(st); go("bystat"); });
+    drawOvPlayers();
     $("ovFoot").innerHTML = T(`Best guess: the Current form model with the Continuity prior; the likely range covers the true level about 68% of the time. "We believe X%" is how far the best guess has moved from the expectation toward this season's results. It is lower than the skill share above because last season is known too. The other tabs show every stat, model and prior. <a class="xl" href="${EXPLAINER}" target="_blank" rel="noopener">How it works</a>.`,
                               `最佳估計：近況模型搭配陣容延續先驗；可能範圍約有 68% 的機率涵蓋真實水準。「相信 X%」是最佳估計從季前預期往本季表現移動了多少。它比上方的實力比例低，因為我們也知道上季的表現。其他分頁有每項數據、模型與先驗。<a class="xl" href="${EXPLAINER}" target="_blank" rel="noopener">方法說明</a>。`);
     setExplainerLinks();
   }
 
+  // ---------- view: players ----------
+  // DATA.players (optional): for each stat, every player with enough playing time in both seasons,
+  // sorted by p = probability that the direction of the estimated change is right.
+  const PD = DATA.players && DATA.players.stats && DATA.players.stats.length ? DATA.players : null;
+  const P_REAL = 0.9, P_PAGE = 150;
+  const PSTAT_DEF = {
+    "MPG": ["Minutes per game played.", "每場出賽的上場分鐘。"],
+    "Usage/36": ["Possessions used per 36 minutes: FGA + 0.44 × FTA + TOV.", "每 36 分鐘用掉的回合：FGA + 0.44 × FTA + TOV。"],
+    "PTS/36": ["Points per 36 minutes.", "每 36 分鐘得分。"],
+    "AST/36": ["Assists per 36 minutes.", "每 36 分鐘助攻。"],
+    "ORB/36": ["Offensive rebounds per 36 minutes.", "每 36 分鐘進攻籃板。"],
+    "DRB/36": ["Defensive rebounds per 36 minutes.", "每 36 分鐘防守籃板。"],
+    "STL/36": ["Steals per 36 minutes.", "每 36 分鐘抄截。"],
+    "BLK/36": ["Blocks per 36 minutes.", "每 36 分鐘阻攻。"],
+    "TOV/36": ["Turnovers per 36 minutes.", "每 36 分鐘失誤。"],
+    "3PAr": ["Share of the player's shots that are threes, in % (3PA ÷ FGA).", "出手中三分球的比例，單位 %（3PA ÷ FGA）。"],
+    "FTr": ["Free-throw attempts per 100 shots (FTA ÷ FGA).", "每 100 次出手的罰球數（FTA ÷ FGA）。"],
+    "2P%": ["Two-point makes ÷ attempts.", "兩分球命中 ÷ 出手。"],
+    "3P%": ["Three-point makes ÷ attempts.", "三分球命中 ÷ 出手。"],
+    "FT%": ["Free-throw makes ÷ attempts.", "罰球命中 ÷ 出手。"],
+    "TS%": ["True shooting: PTS ÷ (2 × (FGA + 0.44 × FTA)).", "真實命中率：PTS ÷ (2 × (FGA + 0.44 × FTA))。"],
+  };
+  const PUNIT_ZH = { games: "場", min: "分鐘" };
+  const punit = (u, n) => T(u === "games" && n === 1 ? "game" : u, PUNIT_ZH[u] || u);
+  const fold = x => x.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const PROWS = [];
+  if (PD) {
+    const ix = Object.fromEntries(PD.cols.map((c, i) => [c, i]));
+    PD.stats.forEach(s => {
+      s.dec = s.true_sd < 1 ? 2 : 1;
+      let lo = Infinity, hi = -Infinity;
+      s.rows.forEach(a => {
+        const r = { s, key: fold(a[ix.player]) }; PD.cols.forEach(c => { r[c] = a[ix[c]]; });
+        [r.last, r.now, r.est - 2 * r.sd, r.est + 2 * r.sd].forEach(v => { lo = Math.min(lo, v); hi = Math.max(hi, v); });
+        PROWS.push(r);
+      });
+      const pad = (hi - lo) * 0.03 || 1; s.dom = [lo - pad, hi + pad];
+    });
+    PROWS.sort((a, b) => b.p - a.p);
+    const opt = (sel, value, text) => { const o = document.createElement("option"); o.value = value; o.textContent = text; sel.appendChild(o); };
+    opt($("pStat"), "all", ""); PD.stats.forEach(s => opt($("pStat"), s.name, s.name));
+    opt($("pTeam"), "all", ""); [...new Set(PROWS.map(r => r.team))].sort().forEach(t => opt($("pTeam"), t, t));
+  } else {
+    document.querySelector('nav.tabs a[data-view="players"]').hidden = true;
+  }
+  let pLimit = P_PAGE;
+  const fmtP = (v, s, signed) => (signed && v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(s.dec);
+  const pctP = p => p >= 0.995 ? ">99%" : Math.floor(p * 100 + 1e-9) + "%";
+  function pVerdict(r) {
+    const up = r.ch > 0, a = up ? "▲ " : "▼ ";
+    if (r.p >= 0.95) return ["hi", a + (up ? "clearly up" : "clearly down"), a + (up ? "明顯上升" : "明顯下降")];
+    if (r.p >= P_REAL) return ["hi", a + (up ? "likely up" : "likely down"), a + (up ? "可能上升" : "可能下降")];
+    if (r.p >= 0.75) return ["neutral", up ? "leaning up" : "leaning down", up ? "略偏上升" : "略偏下降"];
+    return ["neutral", "too early", "言之過早"];
+  }
+  const pScope = () => {
+    const q = fold((state.pq || "").trim());
+    return PROWS.filter(r => (state.pstat === "all" || r.s.name === state.pstat) && (state.pteam === "all" || r.team === state.pteam) && (!q || r.key.includes(q)));
+  };
+  function legendPlayers() {
+    const sw = inner => `<svg width="34" height="14" aria-hidden="true">${inner}</svg>`;
+    $("legend4").innerHTML =
+      `<span>${sw('<line x1="17" y1="2" x2="17" y2="12" stroke="var(--last)" stroke-width="2"/>')} ${B("last season", "上季")}</span>` +
+      `<span>${sw('<circle cx="17" cy="7" r="4" fill="none" stroke="var(--raw)" stroke-width="2"/>')} ${B("this season so far", "本季至今")}</span>` +
+      `<span>${sw('<rect x="2" y="3" width="30" height="8" rx="2" fill="var(--accent)" opacity=".85"/><rect x="15" y="1" width="4" height="12" fill="var(--fg)"/>')} ${B("estimated level from here on, 68% range", "往後水準的估計，68% 區間")}</span>` +
+      `<span>${sw('<line x1="1" y1="7" x2="33" y2="7" stroke="var(--accent)" stroke-width="2" opacity=".45"/>')} ${B("95% range", "95% 區間")}</span>`;
+  }
+  function drawPlayers() {
+    if (state.pstat !== "all" && !PD.stats.some(s => s.name === state.pstat)) state.pstat = "all";
+    if (state.pteam !== "all" && !PROWS.some(r => r.team === state.pteam)) state.pteam = "all";
+    $("pStat").options[0].textContent = T("All stats", "全部數據"); $("pTeam").options[0].textContent = T("All teams", "全部球隊");
+    $("pStat").value = state.pstat; $("pTeam").value = state.pteam;
+    if ($("pQuery").value !== (state.pq || "")) $("pQuery").value = state.pq || "";
+    $("pQuery").placeholder = T("name", "姓名");
+    document.querySelectorAll("#pShow button").forEach(b => b.setAttribute("aria-pressed", (b.dataset.show === "real") === !!state.preal ? "true" : "false"));
+    legendPlayers();
+    const scope = pScope(), real = scope.filter(r => r.p >= P_REAL), rows = state.preal ? real : scope;
+    const sep = '<span class="sep">|</span>', one = state.pstat === "all" ? null : PD.stats.find(s => s.name === state.pstat);
+    const nPlayers = new Set(scope.map(r => r.id)).size;
+    $("pSummary").innerHTML = T(`<b>${real.length}</b> of ${scope.length.toLocaleString("en")} changes are likely real (p ≥ ${P_REAL * 100}%)`, `${scope.length.toLocaleString("en")} 項變化中有 <b>${real.length}</b> 項應屬真實（p ≥ ${P_REAL * 100}%）`) +
+      sep + T(`${nPlayers} player${nPlayers === 1 ? "" : "s"}`, `${nPlayers} 名球員`) + sep + T(`${DATA.season} through ${PD.through} vs ${DATA.last}`, `${DATA.season} 至 ${PD.through}，對照 ${DATA.last}`);
+    $("pStatNote").innerHTML = one ? T(`<b>${one.name}</b>: ${(PSTAT_DEF[one.name] || [""])[0]} Half signal after <b>${one.k < 10 ? one.k.toFixed(1) : Math.round(one.k)} ${punit(one.unit, Math.round(one.k))}</b> (k); a player's true level carries over from one season to the next with correlation ${one.r.toFixed(2)}. The league as a whole moved ${fmtP(one.shift, one, true)} since last season, which is taken out of every Δ.`,
+      `<b>${one.name}</b>：${(PSTAT_DEF[one.name] || ["", ""])[1]}累積 <b>${one.k < 10 ? one.k.toFixed(1) : Math.round(one.k)} ${punit(one.unit)}</b> 後一半是訊號（k）；球員真實水準的跨季相關為 ${one.r.toFixed(2)}。全聯盟自上季整體變動 ${fmtP(one.shift, one, true)}，每個 Δ 都已扣除。`) : "";
+    $("pStatNote").hidden = !one;
+    const list = $("pList"); list.innerHTML = "";
+    const more = $("pMore"); more.innerHTML = "";
+    const btn = (label, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.textContent = label; b.addEventListener("click", fn); more.appendChild(b); };
+    if (!rows.length) {
+      const p = document.createElement("p"); p.className = "note"; p.style.margin = "10px 0 0";
+      p.textContent = !scope.length ? T("No player matches. A player is listed only with enough playing time in both seasons.", "沒有符合的球員。球員須在兩季都有足夠的上場時間才會列出。")
+        : T(`None of these ${scope.length} changes passes ${P_REAL * 100}% yet: with this few games, a difference this size still happens by luck.`, `這 ${scope.length} 項變化目前都未達 ${P_REAL * 100}%：比賽場數還少，這種幅度的差距仍可能只是運氣。`);
+      list.appendChild(p);
+      if (scope.length) btn(T(`Show all ${scope.length}`, `顯示全部 ${scope.length} 項`), () => { state.preal = false; render(); });
+      return;
+    }
+    const hd = document.createElement("div"); hd.className = "prow hd";
+    hd.innerHTML = `<div class="who">${B("player", "球員")}</div><div class="stat">${B("stat", "數據")}</div><div class="plot">${B("last season → this season, and what we believe", "上季 → 本季，以及我們相信多少")}</div><div class="val">${B("last → now", "上季 → 本季")}</div><div class="read">${B("read", "判讀")}</div>`;
+    list.appendChild(hd);
+    const plots = [];
+    rows.slice(0, pLimit).forEach(r => {
+      const s = r.s, v = pVerdict(r), row = document.createElement("div"); row.className = "prow";
+      const who = document.createElement("div"); who.className = "who";
+      const nb = document.createElement("button"); nb.type = "button"; nb.textContent = r.player; nb.title = T("Show every stat of this player", "顯示這名球員的所有數據");
+      nb.addEventListener("click", () => { Object.assign(state, { pq: r.player, pstat: "all", pteam: "all", preal: false }); pLimit = P_PAGE; render(); window.scrollTo({ top: 0 }); });
+      const ws = document.createElement("small"); ws.textContent = r.team + (r.age != null ? T(` · age ${r.age}`, ` · ${r.age} 歲`) : "");
+      who.append(nb, ws);
+      const stc = document.createElement("div"); stc.className = "stat"; stc.innerHTML = `${s.name}<small>${r.n} ${punit(s.unit, r.n)}</small>`;
+      const pc = document.createElement("div"); pc.className = "plot";
+      const svg = el("svg", { class: "mini", role: "img", "aria-label": T(`${r.player}, ${s.name}: ${fmtP(r.last, s)} last season, ${fmtP(r.now, s)} so far, estimate ${fmtP(r.est, s)} ± ${fmtP(r.sd, s)}`, `${r.player} ${s.name}：上季 ${fmtP(r.last, s)}，本季至今 ${fmtP(r.now, s)}，估計 ${fmtP(r.est, s)} ± ${fmtP(r.sd, s)}`) });
+      pc.appendChild(svg); plots.push([svg, r]);
+      const val = document.createElement("div"); val.className = "val";
+      val.innerHTML = `${fmtP(r.last, s)} → ${fmtP(r.now, s)}<small>${T("est.", "估計")} ${fmtP(r.est, s)} ± ${fmtP(r.sd, s)}</small>`;
+      const read = document.createElement("div"); read.className = "read";
+      read.innerHTML = `<span class="chip ${v[0]}">${T(v[1], v[2])}</span><small>Δ ${fmtP(r.ch, s, true)} ± ${fmtP(r.ch_sd, s)} · p ${pctP(r.p)}</small>`;
+      row.append(who, stc, pc, val, read); list.appendChild(row);
+    });
+    if (rows.length > pLimit) btn(T(`Show ${Math.min(P_PAGE, rows.length - pLimit)} more (${rows.length - pLimit} left)`, `再顯示 ${Math.min(P_PAGE, rows.length - pLimit)} 項（還有 ${rows.length - pLimit} 項）`), () => { pLimit += P_PAGE; drawPlayers(); });
+    if (state.preal && scope.length > real.length) btn(T(`Show all ${scope.length}, including the unclear ones`, `顯示全部 ${scope.length} 項，含尚不明確的`), () => { state.preal = false; render(); });
+    requestAnimationFrame(() => {
+      const W = Math.max(120, plots.length ? plots[0][0].clientWidth || plots[0][0].parentElement.clientWidth : 120);
+      plots.forEach(([svg, r]) => drawPlayerMini(svg, r, W));
+    });
+  }
+  function drawPlayerMini(svg, r, W) {
+    const H = 26, cy = 13, [lo, hi] = r.s.dom;
+    const X = v => 5 + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (W - 10);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
+    svg.appendChild(el("line", { x1: 5, x2: W - 5, y1: cy, y2: cy, stroke: "var(--line)", "stroke-width": 1 }));
+    svg.appendChild(el("line", { x1: X(r.est - 2 * r.sd), x2: X(r.est + 2 * r.sd), y1: cy, y2: cy, stroke: "var(--accent)", "stroke-width": 2, opacity: .45 }));
+    svg.appendChild(el("rect", { x: X(r.est - r.sd), y: cy - 5, width: Math.max(1, X(r.est + r.sd) - X(r.est - r.sd)), height: 10, rx: 2, fill: "var(--accent)", opacity: .85 }));
+    svg.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--last)", "stroke-width": 2 }));
+    svg.appendChild(el("circle", { cx: X(r.now), cy, r: 3.5, fill: "var(--surface)", stroke: "var(--raw)", "stroke-width": 2 }));
+    svg.appendChild(el("rect", { x: X(r.est) - 2, y: cy - 7, width: 4, height: 14, fill: "var(--fg)" }));
+  }
+  function playersNote() {
+    const fs = PD.fit_seasons, span = `${fs[0] - 1}-${String(fs[0]).slice(2)}${T(" to ", " 至 ")}${fs[1] - 1}-${String(fs[1]).slice(2)}`;
+    $("pNote").innerHTML = T(`<b>How to read it.</b> Early in a season most jumps are noise: a hot or cold dozen games. For each player and stat the model weighs how many minutes or attempts stand behind each season, how much that stat usually really changes from one season to the next and within a season, and the player's age. <b>Estimate</b> is the level to expect from here on. <b>Δ</b> is the estimated real change since last season, with the league-wide shift removed, ± one SD. <b>p</b> is the probability that the change really has the direction shown: <b>clearly</b> = p ≥ 95%, <b>likely</b> = p ≥ 90%, <b>leaning</b> = p ≥ 75%; below that it is too early to tell. A player is listed with enough playing time in both seasons. Click a name for all of that player's stats.<br><b>Does p hold up?</b> The model is fitted on ${span}. Judging 2024-25 after 12 team games, with only the data up to then: of the 94 calls with p from 90 to 95%, 90.4% had the right direction over the rest of the season; of the 57 calls at 95% or more, 96.5%; of the 1,150 calls from 50 to 60%, 53.4%.`,
+      `<b>怎麼讀。</b>球季初的大多數起伏只是雜訊：十幾場手感特別好或特別差。模型對每位球員的每項數據，衡量兩季各累積了多少分鐘或出手、這項數據通常在季與季之間和一季之內實際會變多少，以及球員年齡。<b>估計</b>是往後可以預期的水準。<b>Δ</b> 是自上季以來估計的真實變化（已扣除全聯盟的整體變動），± 一個標準差。<b>p</b> 是變化方向確實如所示的機率：<b>明顯</b> = p ≥ 95%，<b>可能</b> = p ≥ 90%，<b>略偏</b> = p ≥ 75%；低於此則言之過早。球員須在兩季都有足夠的上場時間才會列出。點球員姓名可看他的所有數據。<br><b>p 可信嗎？</b>模型以 ${span} 球季擬合。只用當時已有的資料，在 2024-25 球季各隊打完 12 場時做判斷：p 在 90% 至 95% 的 94 次判斷中，90.4% 在該季剩餘賽程方向正確；p 在 95% 以上的 57 次中為 96.5%；p 在 50% 至 60% 的 1,150 次中為 53.4%。`);
+  }
+  function drawOvPlayers() {
+    const box = $("ovPlayers");
+    if (!PD) { box.innerHTML = ""; return; }
+    const real = PROWS.filter(r => r.p >= P_REAL), seen = new Set(), top = [];
+    for (const r of real) { if (!seen.has(r.id)) { seen.add(r.id); top.push(r); } if (top.length === 3) break; }
+    const ex = top.map(r => T(`${r.player} (${r.s.name} ${fmtP(r.last, r.s)} → ${fmtP(r.now, r.s)})`, `${r.player}（${r.s.name} ${fmtP(r.last, r.s)} → ${fmtP(r.now, r.s)}）`)).join(T(", ", "、"));
+    box.innerHTML = `<h3>${T("Players: which changes are real?", "球員：哪些變化是真的？")}</h3>` +
+      `<p class="hint">${T(`Of ${PROWS.length.toLocaleString("en")} player numbers that can be compared with last season, <b>${real.length}</b> have changed in a way that is at least 90% likely to be real${ex ? `. The surest: ${ex}` : ""}.`,
+        `可與上季比較的 ${PROWS.length.toLocaleString("en")} 項球員數據中，有 <b>${real.length}</b> 項的變化至少有 90% 的機率是真的${ex ? `。最確定的：${ex}` : ""}。`)}</p>` +
+      `<div class="row"><button type="button" class="btn" id="ovPlayersBtn">${T("Player changes →", "球員變化 →")}</button></div>`;
+    $("ovPlayersBtn").addEventListener("click", () => { Object.assign(state, { pstat: "all", pteam: "all", pq: "", preal: true }); pLimit = P_PAGE; go("players"); });
+  }
+  if (PD) {
+    $("pStat").addEventListener("change", () => { state.pstat = $("pStat").value; pLimit = P_PAGE; render(); });
+    $("pTeam").addEventListener("change", () => { state.pteam = $("pTeam").value; pLimit = P_PAGE; render(); });
+    $("pQuery").addEventListener("input", () => { state.pq = $("pQuery").value; pLimit = P_PAGE; drawPlayers(); save(); });
+    $("pShow").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.preal = b.dataset.show === "real"; pLimit = P_PAGE; render(); });
+  }
+
   // ---------- routing ----------
-  const VIEWS = ["overview", "bystat", "funnel", "byteam", "table"];
+  const VIEWS = ["overview", "bystat", "funnel", "byteam", "table"].concat(PD ? ["players"] : []);
+  if (!VIEWS.includes(state.view)) state.view = "overview";
   function applyLang() {
     const m = document.querySelector("main");
     m.dataset.lang = state.lang; m.lang = ZH() ? "zh-Hant" : "en";
@@ -1067,8 +1269,9 @@
   function render() {
     applyLang();
     VIEWS.forEach(v => { $("v-" + v).hidden = v !== state.view; });
+    if (!PD) $("v-players").hidden = true;
     document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.view === state.view ? "page" : "false"));
-    const ov = state.view === "overview";   // the overview has its own fixed settings: no control bar, no summary line
+    const ov = state.view === "overview" || state.view === "players";   // these views have their own settings: no control bar, no summary line
     $("controls").hidden = ov; $("summary").hidden = ov;
     $("statCtl").hidden = state.view === "byteam"; $("teamCtl").hidden = state.view !== "byteam";
     const funnel = state.view === "funnel";  // raw data only: model and prior do not apply
@@ -1079,7 +1282,7 @@
     document.querySelectorAll("#modelSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.model === state.model ? "true" : "false"));
     if (ov) { closePop(); reservedW = -1; } else { reserveSummary(); summary(); refreshPop(); }   // a hidden summary measures 0: measure again when it shows
     legend("legend"); legend("legend2"); legendFunnel();
-    if (ov) drawOverview(); else if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
+    if (state.view === "players") { playersNote(); drawPlayers(); } else if (ov) drawOverview(); else if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
     save();
   }
   function go(view) { state.view = view; if (location.hash !== "#" + view) location.hash = view; render(); window.scrollTo({ top: 0 }); }
@@ -1095,7 +1298,7 @@
   // ← / → step through stats (By stat, Funnel, Table) or teams (By team) unless a form control has the focus
   document.addEventListener("keydown", ev => {
     if (ev.altKey || ev.ctrlKey || ev.metaKey || !["ArrowLeft", "ArrowRight"].includes(ev.key)) return;
-    if (state.view === "overview" || (ev.target.closest && ev.target.closest("select, input, textarea"))) return;
+    if (state.view === "overview" || state.view === "players" || (ev.target.closest && ev.target.closest("select, input, textarea"))) return;
     const d = ev.key === "ArrowLeft" ? -1 : 1;
     if (state.view === "byteam") stepTeam(d); else stepStat(d);
   });
