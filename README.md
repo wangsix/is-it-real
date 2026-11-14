@@ -41,7 +41,10 @@ strength, or null), `lower_is_better`, `style`, `q_ratio`, `beta`, `priors`
 Each row: `team`, `g`, `raw`, `raw_sd`, `raw_rk`, `last`, `delta`, `z`, `cont`,
 `K_cont`, `missing`, and for each prior `P`: `P`, `P sd`, `P w`, `P rk`,
 `P form`, `P form sd`, `P full`, `P full sd`, `P mean` (the prior's own value, i.e. the
-pre-season expectation; the season estimate is `P w`·`raw` + (1 − `P w`)·`P mean`).  A missing
+pre-season expectation; the season estimate is `P w`·`raw` + (1 − `P w`)·`P mean`).  A stat
+with `opp_adjusted` (Net Rtg) also has `P opp`, `P form opp`, `P full opp`: the part of
+`P`, `P form`, `P full` that comes from the opponents' strength, already included in them
+(so for that stat the season estimate is the formula above plus `P opp`).  A missing
 or non-finite number is `null`.
 
 Change `SCHEMA_VERSION` in `nba_stabilization/export.py` and `SCHEMA` in
@@ -95,8 +98,9 @@ Next, in this order:
 
 Tested and dropped (see the main README):
 
-- **Schedule (opponent) adjustment.**  Even the oracle adjustment, with the
-  opponents' full-season strength, does not improve prediction in 2016–2025.
+- **Home/away term.**  No measurable gain in 2016–2025.  (The opponent term is on
+  the page for Net Rtg: 1 to 2 % lower squared error.  The older oracle adjustment at
+  full weight showed no gain.)
 - **Luck-adjusted ratings** (opponents' 3PT% and FT% set to the league average).
   They predict the rest of the season worse than the raw ratings at all N.
 

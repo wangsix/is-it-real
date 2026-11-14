@@ -515,7 +515,8 @@
   function popHTML(kind) {
     const st = S(), item = (cur, dt, dd) => `<div class="${cur ? "cur" : ""}"><dt>${dt}</dt><dd>${dd}</dd></div>`;
     const lm = fmt(st.league_mean, st, { plain: true }), ll = fmt(st.league_mean_last, st, { plain: true });
-    if (kind === "stat") return `<h3>${st.name}</h3>${STAT_DEF[st.name] ? `<p>${T(...STAT_DEF[st.name])}</p>` : ""}<dl>` +
+    const oppNote = st.opp_adjusted ? `<p>${T("The estimates count each game against the opponent's own estimated level, so a result against a strong team is worth more. Raw is not adjusted. In back-tests on 2016–2025 this lowered the squared error by 1 to 2%; a home/away term did not help.", "估計值把每場比賽依對手的估計水準調整，所以對強隊的戰績更有份量。「本季」原始值不調整。2016–2025 的回測中，這讓平方誤差降低 1 到 2%；主客場修正則沒有幫助。")}</p>` : "";
+    if (kind === "stat") return `<h3>${st.name}</h3>${STAT_DEF[st.name] ? `<p>${T(...STAT_DEF[st.name])}</p>` : ""}${oppNote}<dl>` +
       item(false, T(`k = ${fmtK(st.k, 1)} games`, `k = ${fmtK(st.k, 1)} 場`), T(`After k games this stat is half signal, half noise; the smaller k, the sooner it can be trusted. Formally k = noise variance ÷ variance of true levels, and reliability after n games = n/(n+k).`, `打滿 k 場後，這項數據一半是訊號、一半是雜訊；k 越小，越早可以相信。正式定義：k = 雜訊變異 ÷ 真實水準變異，n 場後的信度 = n/(n+k)。`)) +
       item(false, T(`single-game noise σ<sub>e</sub> = `, `單場雜訊 σ<sub>e</sub> = `) + fmtSd(st.noise_sd, st) + unitWord(st), T(`How much one game's value scatters around the team's true level.`, `單場數值圍繞球隊真實水準的離散程度。`)) +
       item(false, T(`spread of true levels σ<sub>T</sub> = `, `真實水準差距 σ<sub>T</sub> = `) + fmtSd(st.true_sd, st) + unitWord(st), T(`How far apart teams really are. k = (σ<sub>e</sub>/σ<sub>T</sub>)².`, `球隊之間實際差多少。k = (σ<sub>e</sub>/σ<sub>T</sub>)²。`)) +
@@ -666,7 +667,7 @@
       r = rows[i]; rank = i + 1;
     }
     const prev = CUR; CUR = st;
-    const e = est(r), s = sd(r);
+    const e = est(r), s = sd(r), o = r[state.prior + sfx(st) + " opp"];
     CUR = prev;
     box.innerHTML = "";
     const b = document.createElement("b"); b.textContent = T(`${rank}. ${r.team}`, `第 ${rank} 名 ${r.team}`);
@@ -675,10 +676,12 @@
       ? `${r.g} 場 · 本季 ${fmt(r.raw, st)}（抽樣 ± ${fmtSd(r.raw_sd, st)}）· 上季 ${fmt(r.last, st)} · 估計 ${fmt(e, st)} ± ${fmtSd(s, st)}` +
         ` → 68% 區間 ${fmt(e - s, st)} 到 ${fmt(e + s, st)}，95% ${fmt(e - 2 * s, st)} 到 ${fmt(e + 2 * s, st)}` +
         (state.model === "season" ? ` · 本季權重 ${(r[state.prior + " w"] || 0).toFixed(2)}` : "") +
+        (o != null ? ` · 其中對手強度 ${fmt(o, st, { signed: true })}` : "") +
         (r.missing != null ? ` · 平均缺陣戰力 ${r.missing.toFixed(1)}（每 100 回合）` : "")
       : `${r.g} games · raw ${fmt(r.raw, st)} (sampling ± ${fmtSd(r.raw_sd, st)}) · last season ${fmt(r.last, st)} · estimate ${fmt(e, st)} ± ${fmtSd(s, st)}` +
         ` → 68% range ${fmt(e - s, st)} to ${fmt(e + s, st)}, 95% ${fmt(e - 2 * s, st)} to ${fmt(e + 2 * s, st)}` +
         (state.model === "season" ? ` · weight on this season ${(r[state.prior + " w"] || 0).toFixed(2)}` : "") +
+        (o != null ? ` · of which opponents ${fmt(o, st, { signed: true })}` : "") +
         (r.missing != null ? ` · mean talent missing ${r.missing.toFixed(1)} per 100 poss` : "");
     box.append(b, t, cardButton(r.team));
   }
@@ -860,7 +863,8 @@
     if (DATA.has_full && hasFull(st)) cols.splice(DATA.has_cont ? 10 : 8, 0, { key: "missing", label: B("missing", "缺陣"), one: true });
     const groups = [["", cols.length]];
     const x = sfx(st);
-    priorNames.forEach(nm => { cols.push({ key: nm + x, label: B("est", "估計"), prior: nm }, { key: nm + x + " sd", label: "±", sd: true, prior: nm }, { key: "__rk " + nm, label: B("rk", "名次"), rk: true, prior: nm }); groups.push([PLB(nm), 3, nm]); });
+    const oppCol = nm => st.opp_adjusted ? [{ key: nm + x + " opp", label: B("opp", "對手"), signed: true, prior: nm }] : [];
+    priorNames.forEach(nm => { cols.push({ key: nm + x, label: B("est", "估計"), prior: nm }, { key: nm + x + " sd", label: "±", sd: true, prior: nm }, ...oppCol(nm), { key: "__rk " + nm, label: B("rk", "名次"), rk: true, prior: nm }); groups.push([PLB(nm), 3 + oppCol(nm).length, nm]); });
     // client-side ranks under the chosen model, for each prior
     const rowsAug = st.rows.map(r => Object.assign({}, r));
     priorNames.forEach(nm => { sortedRows(st, nm).forEach((r, i) => { rowsAug.find(a => a.team === r.team)["__rk " + nm] = i + 1; }); });
@@ -919,19 +923,20 @@
     ["3PT%", "Their own 3-point %", "自家三分命中率"],
     ["Opp. 3PT%", "Opponents' 3-point %", "對手三分命中率"],
   ];
+  const OV_OPP_MIN = 0.5;   // opponent term (points per 100) worth a sentence on a card
   const median = xs => { const s = xs.slice().sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   // One team in one stat, in overview terms: expected (prior mean), start (raw), best guess and its SD.
   function ovTeam(st, r) {
-    const pick = sfxs => { for (const x of sfxs) if (r[OV_PRIOR + x] != null && r[OV_PRIOR + x + " sd"] != null) return [r[OV_PRIOR + x], r[OV_PRIOR + x + " sd"]]; return [null, null]; };
-    const [guess, s] = pick([" form", ""]);
+    const pick = sfxs => { for (const x of sfxs) if (r[OV_PRIOR + x] != null && r[OV_PRIOR + x + " sd"] != null) return [r[OV_PRIOR + x], r[OV_PRIOR + x + " sd"], r[OV_PRIOR + x + " opp"] || 0]; return [null, null, 0]; };
+    const [guess, s, opp] = pick([" form", ""]);   // opp: the part of the guess that comes from the opponents' strength
     let exp = r[OV_PRIOR + " mean"];
     const w = r[OV_PRIOR + " w"];   // older data has no "mean" key: recover it from the season estimate
     if (exp == null && w != null && w < 1 && r[OV_PRIOR] != null) exp = (r[OV_PRIOR] - w * r.raw) / (1 - w);
     if (guess == null || exp == null || r.raw == null || r.raw_sd == null) return null;
     const dir = st.lower_is_better ? -1 : 1, gap = r.raw - exp, z = gap / r.raw_sd;
-    const share = gap ? (guess - exp) / gap : 0;        // how much of the gap the best guess keeps
+    const share = gap ? (guess - opp - exp) / gap : 0;  // how much of the gap the best guess keeps, before the opponent term
     const zReal = Math.sign(gap) * (guess - exp) / s;   // > 0: the true level is past the expectation, in the direction of the start
-    return { team: r.team, g: r.g, exp, raw: r.raw, guess, s, gap, z, share, zReal, hot: dir * gap > 0 };
+    return { team: r.team, g: r.g, exp, raw: r.raw, guess, s, gap, z, share, zReal, opp, hot: dir * gap > 0 };
   }
   // plot width inside a card at the current page width (drawn at true size, so the dots stay round)
   const ovPlotW = () => { const w = $("v-overview").clientWidth; return Math.max(200, w <= 620 ? w - 26 : w - 112 - 16 - 26); };
@@ -974,6 +979,8 @@
       if (c[0] === "good" && !t.hot) c[0] = "bad";   // a real slump is real, but not good news
       chip = `<span class="chip ${c[0]}">${T(c[1], c[2])}</span>`;
     }
+    if (Math.abs(t.opp) >= OV_OPP_MIN) txt += T(` That includes <b>${fmt(t.opp, st, { signed: true })}</b> for ${t.opp > 0 ? "strong" : "weak"} opponents so far.`,
+                                                `其中 <b>${fmt(t.opp, st, { signed: true })}</b> 來自對手強度（至今賽程偏${t.opp > 0 ? "強" : "弱"}）。`);
     return `<div class="scard"><div class="who"><b>${t.team}</b><span>${label}${T(", ", "，")}${T(`${t.g} games`, `${t.g} 場`)}</span></div>` +
       `<div>${svg}<p>${txt}${chip}</p></div></div>`;
   }
