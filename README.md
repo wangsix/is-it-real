@@ -9,8 +9,8 @@ Planned home: repository `wangsix/is-it-real`, served by GitHub Pages at
 
 | file | what it is |
 |---|---|
-| `index.html` | the rank page (Overview, By stat, Funnel, By team, Table, Players).  Loads `data/ratings.json` |
-| `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
+| `index.html` | the rank page: tabs Today, Teams, Players and Lab (By stat, Funnel, Table).  Loads `data/ratings.json`.  Addresses `#today`, `#teams`, `#players`, `#lab`, `#bystat`, `#funnel`, `#table` (the older `#overview` and `#byteam` still work) |
+| `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  A back link and a contents list (a fixed column on wide screens).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
 | `build.py` | makes one self-contained file with the data inlined (stdlib only) |
 | `data/ratings.json` | generated; not in git |
 | `dist/` | generated; not in git |
@@ -75,15 +75,21 @@ error, not wrong numbers, when the versions differ.
 
 ## Roadmap
 
-Done: **Overview** view, the default for a first visit.  Written from the data on every load, so
-it follows each `nba-stab update` with no extra step.  It always uses Current form with the
-Continuity prior and Net Rtg: a headline by season phase (before game 5 "too early to tell";
-to game 40 "which starts are real?"; from game 41 "which surprises held up?"), a signal meter
-n/(n+k) for seven stats at the median games played, up to three hot and three cold surprises
-(|raw − expected| ≥ one sampling SD, largest first), and a card for a chosen team.  Each card
-gives the expected value (`P mean`), the start, the best guess with its 68% range, the share of
-the gap the guess keeps, and a chip from (guess − expected)/SD: ≥ 2 "very likely real",
-≥ 1 "likely real", otherwise "too early to tell".  Checked on 2025-26 as of games 10, 20 and
+Done: **Today** view (was Overview), the default for a first visit.  Written from the data on
+every load, so it follows each `nba-stab update` with no extra step.  It always uses Current form
+with the Continuity prior and Net Rtg.  The headline gives the answer: before game 5 "too early to
+tell"; to game 40 the surprise with the largest (guess − expected)/SD on each side whose start
+"looks real" (≥ 1), e.g. "12 games in: MIN's hot start and CHO's cold one look real"; from game 41
+the same as "really is better / worse than expected".  Then one chart with every team (expected,
+this season, best guess and 68% range, ▲▼ on the starts that look real), up to three hot and
+three cold surprise cards (|raw − expected| ≥ one sampling SD, largest first), a card for a
+chosen team, a signal meter n/(n+k) for seven stats at the median games played (shown as
+skill % · luck %), and a Players count.  Each card gives the expected value (`P mean`), the
+start, the best guess with its 68% range, the share of the gap the guess keeps ((guess −
+expected)/gap, opponent term included, so the sentence adds up), and a label from (guess −
+expected)/SD: ≥ 2 "clearly real", ≥ 1 "likely real", otherwise "too early to tell".  The same
+three words (clearly, likely, too early / can't tell yet) are used on the team pages and the
+Players view.  Checked on 2025-26 as of games 10, 20 and
 41: 17 of the 18 surprise cards moved past the expectation over the rest of the season in the
 direction the card said (the continuity fit includes that season, so this is not a clean
 back-test).
@@ -94,12 +100,12 @@ the bands against the count that chance gives.  It uses the current data contrac
 
 Done: **Players** view.  Which player changes from last season are real: one row per
 player and stat with last season, this season so far, the estimate with its 68% and 95%
-range, Δ ± SD and p; filters by stat, team and name, and a count on the Overview.  Uses the
+range, Δ ± SD and p; filters by stat, team and name, and a count on the Today page.  Uses the
 `players` block.
 
 Next, in this order:
 
-1. **Fan chart per team** (By team view).  The raw season-to-date value, the
+1. **Fan chart per team** (team page).  The raw season-to-date value, the
    estimate and its ±1 SD band against game number, with the prior as a dashed line.
    Needs the estimate after each game in `ratings.json` (new keys: schema stays 1).
 2. **Bump chart.**  Each team's rank by estimated Net Rtg after each game.  Uses the

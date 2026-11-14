@@ -40,7 +40,7 @@
   body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.55;
          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
          padding-block: 24px 60px; }
-  main { max-width: 860px; margin: 0 auto; display: grid; gap: 44px; }
+  main { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 44px; }   /* minmax: a wide figure or table scrolls instead of widening the page on a phone */
   main.zh { line-height: 1.75; }
   h1 { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1.05; margin: 0 0 6px; text-wrap: balance; }
   h2 { font-family: var(--display); font-weight: 600; font-size: 28px; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
@@ -54,7 +54,7 @@
   .seg button { font: 600 12px/1 var(--body); padding: 6px 12px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; }
   .seg button + button { border-left: 1px solid var(--line-strong); }
   .seg button[aria-pressed="true"] { background: var(--neutral-soft); color: var(--fg); }   /* language switch: a utility, kept quiet */
-  section { display: grid; gap: 12px; }
+  section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .short { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; font-size: 16px; max-width: none; margin: 0; }
   .short b:first-child { color: var(--accent); margin-right: 4px; }
   .tldr { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
@@ -99,14 +99,31 @@
   .steps div { padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
   .steps b { color: var(--accent); font-weight: 500; }
   .steps i { color: var(--noise); font-style: normal; }
-  @media (prefers-reduced-motion: no-preference) { svg * { transition: opacity .2s; } }
+  /* way back to the rankings, and a contents list: a box under the short version, a fixed column on wide screens */
+  .back { font-family: var(--label); font-size: 15px; font-weight: 600; letter-spacing: .015em; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .toc { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 14.5px; }
+  .toc b { font-family: var(--label); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+  .toc ol { margin: 6px 0 0; padding-left: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 3px 18px; }
+  .toc a { text-decoration: none; color: var(--fg); }
+  .toc a:hover, .toc a.on { color: var(--accent); }
+  .toc a.on { font-weight: 600; }
+  .toc .home { display: none; }
+  section[id] { scroll-margin-top: 16px; }
+  @media (min-width: 1260px) {
+    .toc { position: fixed; top: 24px; left: max(16px, calc(50% - 430px - 236px)); width: 196px; background: transparent; border: 0; padding: 0; }
+    .toc ol { grid-template-columns: 1fr; gap: 6px; padding-left: 18px; }
+    .toc .home { display: block; margin-top: 14px; }
+  }
+  @media (prefers-reduced-motion: no-preference) { svg * { transition: opacity .2s; } html { scroll-behavior: smooth; } }
 </style>
 
 <main>
 
 <header>
   <div class="top">
-    <div class="eyebrow"><a href="index.html"><span lang="en">Is it real?</span><span lang="zh-Hant">是真的嗎？</span></a> · <span lang="en">NBA team stats, 2015-16 to 2024-25</span><span lang="zh-Hant">NBA 球隊數據，2015-16 至 2024-25</span></div>
+    <div><a class="back" href="index.html"><span lang="en">← Back to the rankings</span><span lang="zh-Hant">← 回到排名</span></a>
+    <div class="eyebrow"><span lang="en">Is it real? · NBA team stats, 2015-16 to 2024-25</span><span lang="zh-Hant">是真的嗎？ · NBA 球隊數據，2015-16 至 2024-25</span></div></div>
     <div class="seg" id="langSeg" role="group" aria-label="Language / 語言"><button type="button" data-lang="en">EN</button><button type="button" data-lang="zh">中文</button></div>
   </div>
   <h1><span lang="en">Signal, Noise and k</span><span lang="zh-Hant">訊號、雜訊與 k</span></h1>
@@ -130,6 +147,22 @@
   <p class="note" lang="en">Each section below opens with a plain summary (shaded); the formal definitions, numbers and checks follow it.</p>
   <p class="note" lang="zh-Hant">以下每一節開頭都有一段白話摘要（底色框），之後才是正式的定義、數字與檢驗。</p>
 </section>
+
+<nav class="toc" id="toc" aria-label="Contents">
+  <b><span lang="en">Contents</span><span lang="zh-Hant">目錄</span></b>
+  <ol>
+    <li><a href="#motivation"><span lang="en">One game is noisy</span><span lang="zh-Hant">單場的雜訊</span></a></li>
+    <li><a href="#k"><span lang="en">k: games and knowledge</span><span lang="zh-Hant">k：場數與資訊</span></a></li>
+    <li><a href="#nout"><span lang="en">N<sub>in</sub> and N<sub>out</sub></span><span lang="zh-Hant">N<sub>in</sub> 與 N<sub>out</sub></span></a></li>
+    <li><a href="#stats"><span lang="en">Which stats settle first</span><span lang="zh-Hant">哪些數據先定型</span></a></li>
+    <li><a href="#prior"><span lang="en">Priors</span><span lang="zh-Hant">先驗</span></a></li>
+    <li><a href="#models"><span lang="en">Three models</span><span lang="zh-Hant">三種模型</span></a></li>
+    <li><a href="#quarters"><span lang="en">Quarters</span><span lang="zh-Hant">分節</span></a></li>
+    <li><a href="#reading"><span lang="en">Marks and labels</span><span lang="zh-Hant">符號與標籤</span></a></li>
+  </ol>
+  <a class="back home" href="index.html"><span lang="en">← Rankings</span><span lang="zh-Hant">← 排名</span></a>
+</nav>
+
 
 <!-- ============================================================ 1. motivation -->
 <section id="motivation">
@@ -365,7 +398,7 @@
   </table></div>
   <p lang="en">Drift barely changes the point estimate, but it fixes the error bars. Back-tested on every checkpoint of 2016–2025, the season-average model's “68%” ranges caught only 50–66% of what followed and its “95%” ranges 76–94%. With drift they catch 68–72% and 95–96%.</p>
   <p lang="zh-Hant">漂移幾乎不改變點估計，但修正了誤差範圍。在 2016–2025 每個檢查點回測，季平均模型的「68%」區間只涵蓋之後實際結果的 50–66%，「95%」區間只涵蓋 76–94%。加入漂移後分別為 68–72% 與 95–96%。</p>
-  <h3><span lang="en">Full strength</span><span lang="zh-Hant">完整戰力</span></h3>
+  <h3><span lang="en">Full strength: counting the missing talent</span><span lang="zh-Hant">完整戰力：缺陣戰力怎麼算</span></h3>
   <p lang="en">For each game, on-floor talent = Σ r<sub>p</sub> · minutes/48, where r<sub>p</sub> is the player's Box Plus/Minus (BPM: points per 100 possessions above an average player, from Basketball-Reference; OBPM for Off Rtg) over the last three seasons, weighted 1 / 0.4 / 0.2 by minutes, shrunk toward halfway between replacement level and average with 500 minutes of evidence, and moved by a typical change for the player's age. A player who missed last season is still rated from the seasons before. A player's normal minutes are the median over the games the player was available for, with a coach's-decision DNP counting as 0; a player who has been unavailable all along gets last season's minutes. Full strength fills 240 minutes from the most-used player down, so a returning starter pushes out the end of the bench. The game's value is moved by β × (full − on-floor talent); β is the within-team slope of results on missing talent, fitted on 2022-23 to 2024-25 (leave-one-season-out in the back-test).</p>
   <p lang="zh-Hant">每場的在場戰力 = Σ r<sub>p</sub> · 上場分鐘/48，r<sub>p</sub> 是球員近三季的 Box Plus/Minus（BPM：每 100 回合比平均球員多貢獻的分數，取自 Basketball-Reference；Off Rtg 用 OBPM），三季依上場分鐘按 1 / 0.4 / 0.2 加權，以 500 分鐘的證據量往替補水準與平均之間的中點收縮，再依年齡加上一般的逐年變化。上季整季缺陣的球員，仍以更早的球季評分。球員的正常上場時間，是他可出賽場次的分鐘中位數，教練決定不上場（DNP）記為 0；整季都無法出賽的球員則用上季的場均分鐘。完整戰力從上場最多的球員往下填滿 240 分鐘，所以先發回歸會擠掉板凳末端，而不是稀釋所有人。每場數值調整 β × (完整戰力 − 在場戰力)；β 是球隊內部「結果對缺陣戰力」的斜率，以 2022-23 至 2024-25 擬合（回測時每次留出一季）。</p>
   <p lang="en">A prior describes a typical season, absences included. At full strength the priors, the league average and the dashed line all move up by β × the league's average missing talent so far, about +0.8 Net Rtg in 2026-27, so “better than average” still means better than an average team at full strength.</p>
@@ -413,7 +446,7 @@
     <dt>bar / line</dt><dd>68% / 95% range of the team's true level under the chosen model and prior; the tick inside is the estimate</dd>
     <dt>circle</dt><dd>this season's raw value, from season totals (e.g. total points ÷ total possessions), not an average of game values</dd>
     <dt>dashed line</dt><dd>this season's league average under the same model</dd>
-    <dt>chips</dt><dd><b>clearly</b> better / worse: the 95% range excludes the league average; <b>likely</b>: the 68% range does; ≈ average: the data cannot yet separate the team from average. Style stats say high / low instead</dd>
+    <dt>labels</dt><dd><b>clearly</b> better / worse: the 95% range excludes the league average; <b>likely</b>: the 68% range does; <b>can't tell yet</b>: the data cannot yet separate the team from average. Style stats say high / low instead</dd>
     <dt>funnel bands</dt><dd>where an exactly average team's raw value would fall 95% / 99.8% of the time from game-to-game noise alone</dd>
     <dt>x-axis</dt><dd>fixed per stat across models and priors, so a range that moves when you switch really moved</dd>
     <dt>Δ vs lg</dt><dd>raw minus last season's value, with the league-wide shift taken out</dd>
@@ -424,7 +457,7 @@
     <dt>長條／細線</dt><dd>所選模型與先驗下，球隊真實水準的 68%／95% 區間；中間的刻線是估計值</dd>
     <dt>圓圈</dt><dd>本季原始值，由本季總數計算（例如總得分 ÷ 總回合數），不是每場數值的平均</dd>
     <dt>虛線</dt><dd>同一模型下的本季聯盟平均</dd>
-    <dt>標籤</dt><dd><b>明顯</b>較好／較差：95% 區間不含聯盟平均；<b>可能</b>：68% 區間不含；≈ 平均：目前資料還無法把這隊和平均分開。風格數據則顯示偏高／偏低</dd>
+    <dt>標籤</dt><dd><b>明顯</b>較好／較差：95% 區間不含聯盟平均；<b>可能</b>：68% 區間不含；<b>還看不出</b>：目前資料還無法把這隊和平均分開。風格數據則顯示偏高／偏低</dd>
     <dt>漏斗帶</dt><dd>一支剛好平均的球隊，單靠逐場雜訊，其原始值有 95%／99.8% 的機率落在帶內</dd>
     <dt>x 軸</dt><dd>每項數據在不同模型與先驗之間固定，所以切換時區間移動就是真的移動</dd>
     <dt>Δ 相對聯盟</dt><dd>本季原始值減上季數值，並扣除全聯盟的整體變動</dd>
@@ -626,5 +659,16 @@
   }
   document.querySelectorAll("#langSeg button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang, true)));
   setLang(lang, false);
+  // contents: mark the section being read
+  const tocLinks = [...document.querySelectorAll("#toc ol a")];
+  if ("IntersectionObserver" in window) {
+    const seen = new Map();
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => seen.set(e.target.id, e.isIntersecting));
+      const cur = tocLinks.map(a => a.getAttribute("href").slice(1)).find(id => seen.get(id));
+      tocLinks.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + cur));
+    }, { rootMargin: "-10% 0px -70% 0px" });
+    tocLinks.forEach(a => { const sec = document.getElementById(a.getAttribute("href").slice(1)); if (sec) io.observe(sec); });
+  }
 })();
 </script>
