@@ -222,6 +222,8 @@
   #ovHero svg { width: 100%; display: block; }
   #ovHero svg text { font-family: var(--body); }
   .hero { padding: 12px 14px; }
+  .hero .status { margin: 6px -14px -12px; padding: 8px 14px; }
+  #teamPanel .mini { cursor: crosshair; touch-action: pan-y; }
   /* Teams: a grid of all 30 by best guess, then the chosen team's page */
   .teams { display: grid; gap: 14px; }
   .ghead { font-family: var(--label); font-size: 19px; font-weight: 600; letter-spacing: .01em; margin: 0 0 8px; }
@@ -362,6 +364,7 @@
       <p class="tstory" id="teamStory"></p>
       <div class="legend" id="legend2"></div>
       <div class="tc" id="teamCard"></div>
+      <div id="tstatus" class="status" aria-live="polite"></div>
       <p class="note bi blk" style="margin-top:8px"><span lang="en">Label: <b>clearly</b> = the 95% range excludes this season's league average; <b>likely</b> = the 68% range does; <b>can't tell yet</b> = the games so far cannot separate this team from average. Pace, 3PAr, FTR, AST% and Opp. 3PAr are style stats, so their labels say high or low, not better or worse. Click a stat to open it in the Lab.</span><span lang="zh-Hant">標籤：<b>明顯</b> = 95% 區間不含本季聯盟平均；<b>可能</b> = 68% 區間不含；<b>還看不出</b> = 目前的比賽還無法把這隊和平均區分開。Pace、3PAr、FTR、AST%、Opp. 3PAr 是風格數據，標籤顯示偏高或偏低，而非好壞。點數據名稱可在「進階」中開啟。</span></p>
     </div>
   </section>
@@ -947,7 +950,12 @@
       card.append(c1, c2, c3, c4);
       CUR = null;
     });
-    requestAnimationFrame(() => plots.forEach(([svg, st, r]) => { CUR = st; drawMini(svg, st, r); CUR = null; }));
+    requestAnimationFrame(() => plots.forEach(([svg, st, r]) => {
+      CUR = st; drawMini(svg, st, r); CUR = null;
+      svg.addEventListener("pointermove", stripPick); svg.addEventListener("pointerdown", stripPick);
+    }));
+    $("teamCard").onpointerleave = ev => { if (ev.pointerType === "mouse") stripRead(null); };   // a tap also ends in pointerleave: keep its readout
+    stripRead(null);
   }
   // All teams by estimated point margin under the chosen model and prior, best first; the left edge
   // carries the same better / worse colour as the labels, so the grid doubles as a standings table.
@@ -974,6 +982,9 @@
     const rows = st.rows.filter(x => est(x) != null);
     const [lo, hi] = domain(st);
     const X = v => 4 + (v - lo) / (hi - lo) * (W - 8);
+    // every team's tick, with its rank, for the readout under the card (pointer -> nearest tick)
+    svg._ticks = sortedRows(st).map((x, i) => ({ team: x.team, v: est(x), s: sd(x), rk: i + 1, x: X(est(x)) }));
+    svg._st = st;
     svg.appendChild(el("line", { x1: 4, x2: W - 4, y1: cy, y2: cy, stroke: "var(--line)", "stroke-width": 1 }));
     rows.forEach(x => { if (x.team !== r.team) svg.appendChild(el("line", { x1: X(est(x)), x2: X(est(x)), y1: cy - 5, y2: cy + 5, stroke: "var(--muted)", "stroke-width": 1, opacity: .45 })); });
     const e = est(r), s = sd(r);
@@ -983,6 +994,30 @@
     if (r.last != null) svg.appendChild(el("line", { x1: X(r.last), x2: X(r.last), y1: cy - 8, y2: cy + 8, stroke: "var(--last)", "stroke-width": 2 }));
     svg.appendChild(el("circle", { cx: X(r.raw), cy, r: 3.5, fill: "var(--surface)", stroke: "var(--raw)", "stroke-width": 2 }));
     svg.appendChild(el("rect", { x: X(e) - 2, y: cy - 7, width: 4, height: 14, fill: "var(--fg)" }));
+    svg._hl = el("line", { x1: 0, x2: 0, y1: 1, y2: H - 1, stroke: "var(--raw)", "stroke-width": 2, visibility: "hidden", "pointer-events": "none" });
+    svg.appendChild(svg._hl);
+  }
+  // Readout for the team page's strips: which team each grey tick is, against the chosen team.
+  function stripRead(svg, tick) {
+    const bar = $("tstatus");
+    document.querySelectorAll("#teamCard .mini").forEach(m => { if (m._hl && (m !== svg || !tick)) m._hl.setAttribute("visibility", "hidden"); });
+    if (!svg || !tick) { bar.textContent = T("Hover over or tap a strip to see which team each grey tick is.", "滑鼠移到或點一下長條，看每條灰色刻線是哪一隊。"); return; }
+    svg._hl.setAttribute("x1", tick.x); svg._hl.setAttribute("x2", tick.x); svg._hl.setAttribute("visibility", "visible");
+    const st = svg._st, me = svg._ticks.find(k => k.team === state.team);
+    const place = k => st.style ? T(`${ordEn(k.rk)} highest`, `第 ${k.rk} 高`) : T(`${ordEn(k.rk)} of ${NTEAMS}`, `第 ${k.rk} 名`);
+    const one = k => `${k.team} ${fmt(k.v, st)} ± ${fmtSd(k.s, st)}${T(` (${place(k)})`, `（${place(k)}）`)}`;
+    bar.innerHTML = "";
+    const b = document.createElement("b"); b.textContent = st.name;
+    const sp = document.createElement("span");
+    sp.textContent = tick.team === state.team || !me ? one(tick) : `${one(tick)} · ${T("vs", "對比")} ${one(me)}`;
+    bar.append(b, sp);
+  }
+  function stripPick(ev) {
+    const svg = ev.currentTarget; if (!svg._ticks) return;
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * (svg.viewBox.baseVal.width / r.width);
+    let best = null;
+    svg._ticks.forEach(k => { if (!best || Math.abs(k.x - x) < Math.abs(best.x - x)) best = k; });
+    stripRead(svg, best && Math.abs(best.x - x) <= 14 ? best : null);
   }
 
   // ---------- view: table ----------
@@ -1151,7 +1186,7 @@
   }
   // Every team on one axis: expected (square), this season (circle), best guess with its likely range.
   // The method in one picture: each best guess sits between the two, closer to the circle as games pile up.
-  function drawHero(st, all, big) {
+  function drawHero(st, all, big, early) {
     const box = $("ovHero");
     const rows = all.slice().sort((a, b) => (st.lower_is_better ? -1 : 1) * (b.guess - a.guess));
     const W = Math.max(300, box.clientWidth - 30), narrow = W < 560;
@@ -1182,11 +1217,38 @@
     box.innerHTML = `<h3>${T("Every team: expected, so far, and our best guess", "全部球隊：季前預期、本季至今，以及最佳估計")}</h3>` +
       `<p class="hint">${T(`Point margin per 100 possessions, best first. Each best guess sits between what we expected and what the team has played so far, and moves toward this season as games pile up. ▲▼ marks a start that looks real. Click a team for its page.`,
                            `每 100 回合淨勝分，由高到低。每個最佳估計都落在季前預期和本季表現之間，比賽越多越靠近本季。▲▼ 標出看來是真的開季表現。點球隊開啟球隊頁。`)}</p>` + ovLegend() +
-      `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${T("Expected, this season and best guess for every team", "每隊的季前預期、本季與最佳估計")}">${g}</svg>`;
+      `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${T("Expected, this season and best guess for every team", "每隊的季前預期、本季與最佳估計")}">${g}</svg>` +
+      `<div class="status" id="heroStatus" aria-live="polite"></div>`;
+    // readout under the chart: the numbers behind the marks of the hovered (or tapped) team, all of
+    // which the team page prints too. Mouse: hover reads, click opens. Touch: tap reads, tap again opens.
+    const byTeam = new Map(rows.map(t => [t.team, t])), inBig = new Set(big.map(t => t.team));
+    let picked = null;
+    const read = t => {
+      const bar = $("heroStatus"); bar.innerHTML = "";
+      if (!t) { bar.textContent = T("Hover over or tap a team to see its numbers. Click (or tap again) to open its page.", "滑鼠移到或點一下球隊可看數字；再點一次（或按一下滑鼠）開啟球隊頁。"); return; }
+      const f = v => fmt(v, st);
+      const word = early ? T("too early to tell", "言之過早") : !inBig.has(t.team) ? T("close to what we expected", "接近季前預期")
+        : t.zReal >= 2 ? T("clearly real", "明顯是真的") : t.zReal >= 1 ? T("likely real", "可能是真的") : T("too early to tell", "言之過早");
+      const b = document.createElement("b"); b.textContent = t.team;
+      const sp = document.createElement("span");
+      sp.textContent = T(`expected ${f(t.exp)} · playing at ${f(t.raw)} (${t.g} games) · best guess ${f(t.guess)}, likely ${f(t.guess - t.s)} to ${f(t.guess + t.s)} · ${word}`,
+                         `季前預期 ${f(t.exp)} · 本季 ${f(t.raw)}（${t.g} 場）· 最佳估計 ${f(t.guess)}，可能介於 ${f(t.guess - t.s)} 到 ${f(t.guess + t.s)} · ${word}`);
+      bar.append(b, sp, cardButton(t.team));
+    };
+    const show = team => read(byTeam.get(team || picked));
     box.querySelectorAll(".row-hit").forEach(el_ => {
-      const open = () => { state.team = el_.dataset.team; go("byteam"); };
-      el_.addEventListener("click", open); el_.addEventListener("keydown", ev => { if (ev.key === "Enter") open(); });
+      const team = el_.dataset.team, open = () => { state.team = team; go("byteam"); };
+      el_.addEventListener("mouseenter", () => show(team)); el_.addEventListener("focus", () => show(team));
+      el_.addEventListener("pointerdown", ev => { lastPointer = ev.pointerType; });
+      el_.addEventListener("click", () => {
+        if (lastPointer === "mouse" || picked === team) open();
+        else { picked = team; box.querySelectorAll(".row-hit").forEach(r => r.classList.toggle("sel", r.dataset.team === team)); show(team); }
+        lastPointer = "mouse";
+      });
+      el_.addEventListener("keydown", ev => { if (ev.key === "Enter") open(); });
     });
+    box.querySelector("svg").addEventListener("mouseleave", () => show(null));
+    show(null);
   }
   function drawOverview() {
     const si = DATA.stats.findIndex(s => s.name === "Net Rtg"), st = DATA.stats[si >= 0 ? si : 0];
@@ -1200,7 +1262,7 @@
           "到了季中，球隊數據大多已是真實水準，但仍有些運氣成分。我們仍把本季表現和季前預期放在一起衡量。")
       : T("Early numbers are part skill, part luck. We start from what we expected before the season and move toward this season's results as games pile up.",
           "開季數據有實力也有運氣。我們從季前預期出發，隨著比賽累積，逐步往本季表現靠攏。");
-    drawHero(st, all, big);
+    drawHero(st, all, big, phase === "early");
     // signal meter: reliability n/(n+k) at the typical number of games played
     $("ovMeterHead").textContent = T(`How much can ${G} games tell you?`, `${G} 場比賽能說明多少？`);
     $("ovMeterHint").textContent = T(`The share of the gaps between teams' numbers that is skill rather than luck, at ${G} games. It grows as games pile up, faster for choices (how many threes) than for results (whether they go in).`,
