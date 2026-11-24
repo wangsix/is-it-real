@@ -4,8 +4,8 @@ The web pages for the `nba-stabilization` ratings.  This folder does not import 
 Python package: the only interface is `data/ratings.json`, written by
 `nba-stab export`.
 
-Planned home: repository `wangsix/is-it-real`, served by GitHub Pages at
-<https://wangsix.github.io/is-it-real/> (static files, no server).
+Live at <https://wangsix.github.io/is-it-real/>: repository `wangsix/is-it-real`,
+served by GitHub Pages (static files, no server).
 
 | file | what it is |
 |---|---|
@@ -65,11 +65,17 @@ error, not wrong numbers, when the versions differ.
 
 ## Publish
 
-1. Move the folder with its history: `git subtree split --prefix site -b site-only`,
-   then push branch `site-only` to `main` of `wangsix/is-it-real`.
-2. In that repository: Settings → Pages → deploy from branch `main`, folder `/`.
-3. Each day: `nba-stab update --out <is-it-real>/data/ratings.json`, then commit and
-   push only that file.  The scraped CSVs stay on the local machine.  (Here,
+The public repository `wangsix/is-it-real` is this folder with its history
+(`git subtree split --prefix site`) plus `data/ratings.json`; GitHub Pages deploys
+branch `main`, folder `/`.  Local clone: `~/Repos/is-it-real`.
+
+1. Page changes: commit them here, then
+   `git subtree split --prefix site -b site-only` and, in the clone,
+   `git pull --no-rebase --no-edit <path to this repository> site-only` and push.
+2. Data, each day: `uv run nba-stab update`, copy `site/data/ratings.json` to the
+   clone's `data/ratings.json`, then commit and push only that file.  The scraped
+   CSVs stay on the local machine.
+3. `.nojekyll` makes Pages serve the files as they are.  (Here,
    `site/data/` is ignored by the root `.gitignore`; the new repository has no such
    rule, so it tracks `data/ratings.json`.)
 
