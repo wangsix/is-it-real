@@ -72,9 +72,11 @@ branch `main`, folder `/`.  Local clone: `~/Repos/is-it-real`.
 1. Page changes: commit them here, then
    `git subtree split --prefix site -b site-only` and, in the clone,
    `git pull --no-rebase --no-edit <path to this repository> site-only` and push.
-2. Data, each day: `uv run nba-stab update`, copy `site/data/ratings.json` to the
-   clone's `data/ratings.json`, then commit and push only that file.  The scraped
-   CSVs stay on the local machine.
+2. Data, each day: the `Daily update` GitHub Actions workflow of `nba_stabilization`
+   commits `data/ratings.json` here (see "Daily update" in its README).  By hand:
+   `uv run nba-stab update`, copy `site/data/ratings.json` to the clone's
+   `data/ratings.json`, then commit and push only that file.  The scraped CSVs never
+   go into this repository.
 3. `.nojekyll` makes Pages serve the files as they are.  (Here,
    `site/data/` is ignored by the root `.gitignore`; the new repository has no such
    rule, so it tracks `data/ratings.json`.)
