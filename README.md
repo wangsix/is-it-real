@@ -12,6 +12,7 @@ served by GitHub Pages (static files, no server).
 | `index.html` | the rank page: tabs Today, Teams, Players and Lab (By stat, Funnel, Table).  Loads `data/ratings.json`.  Addresses `#today`, `#teams`, `#players`, `#lab`, `#bystat`, `#funnel`, `#table` (the older `#overview` and `#byteam` still work) |
 | `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  A back link and a contents list (a fixed column on wide screens).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
 | `build.py` | makes one self-contained file with the data inlined (stdlib only) |
+| `og.png`, `og.svg` | the link-preview picture (1200 × 630) and its source |
 | `data/ratings.json` | generated; not in git |
 | `dist/` | generated; not in git |
 
@@ -26,6 +27,22 @@ python3 site/build.py             # site/dist/rank.html, one file (for the claud
 
 Opening `index.html` from disk (`file://`) cannot fetch the JSON; use the server or
 the single-file build.
+
+## Sharing
+
+- **Share as image** (Today): a dialog with a PNG drawn in the browser on a canvas, in the
+  page's current theme and language: every team (1080 × 1350) or the chosen team's card
+  (1200 × 675).  Buttons: the system share sheet where the browser can share files (phones),
+  Download, and Copy.  Nothing is uploaded.
+- **Link preview**: `index.html` and `explainer.html` carry Open Graph and Twitter card tags
+  that point at `og.png` by its absolute address on the live site.  The picture has no data
+  in it, so it does not go stale.  To change it, edit `og.svg` and render it again:
+
+  ```bash
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --window-size=1200,630 --force-device-scale-factor=1 --virtual-time-budget=8000 --screenshot=site/og.png "file://$PWD/site/og.svg"
+  ```
+
+  Social sites cache the picture for days; a new one shows up late.
 
 ## Data contract (`schema_version` 1)
 
