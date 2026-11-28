@@ -44,6 +44,13 @@ the single-file build.
 
   Social sites cache the picture for days; a new one shows up late.
 
+## Visit counts
+
+Both pages load GoatCounter (`wangsix.goatcounter.com`, no cookies) when the host is
+`wangsix.github.io`, so a local server, a copy or the single-file build is not counted.
+It counts one view per page load, with the referrer; moving between tabs or teams inside
+`index.html` is not counted.  Each footer says so.
+
 ## Data contract (`schema_version` 1)
 
 Top level: `schema_version`, `season`, `last` (season labels), `games` ([min, max]
