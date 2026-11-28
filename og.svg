@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Source of og.png, the link-preview picture (see README.md, "Link preview").  The strip is an
+       illustration of the marks, not data. -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&amp;family=Barlow+Semi+Condensed:wght@600&amp;family=IBM+Plex+Sans:wght@400;500&amp;display=block");
+    .d { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 700; }
+    .l { font-family: "Barlow Semi Condensed", "Arial Narrow", sans-serif; font-weight: 600; }
+    .b { font-family: "IBM Plex Sans", system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
+  </style>
+  <rect width="1200" height="630" fill="#f5f2eb"/>
+  <g transform="translate(72 52) scale(1.75)">
+    <circle cx="16" cy="16" r="14.5" fill="#c8622a"/>
+    <g fill="none" stroke="#1b1813" stroke-width="1.8">
+      <circle cx="16" cy="16" r="14.5"/>
+      <path d="M1.5 16h29M16 1.5v29M6.2 5.4c4.6 5.6 4.6 15.6 0 21.2M25.8 5.4c-4.6 5.6-4.6 15.6 0 21.2"/>
+    </g>
+  </g>
+  <text class="d" x="68" y="236" font-size="140" fill="#1b1813">Is it real?</text>
+  <text class="b" x="72" y="298" font-size="40" font-weight="500" fill="#1b1813">Which NBA hot and cold starts are real,</text>
+  <text class="b" x="72" y="346" font-size="40" font-weight="500" fill="#1b1813">and which are just luck?</text>
+  <text class="b" x="72" y="398" font-size="28" fill="#5d574d">NBA 開季表現：是實力，還是運氣？</text>
+
+  <rect x="72" y="428" width="1056" height="112" rx="12" fill="#fffdf9" stroke="#e2dbcd" stroke-width="2"/>
+  <line x1="104" x2="1096" y1="470" y2="470" stroke="#cfc6b5" stroke-width="2"/>
+  <line x1="560" x2="560" y1="440" y2="500" stroke="#1b1813" stroke-width="2" stroke-dasharray="5 5"/>
+  <line x1="400" x2="930" y1="470" y2="470" stroke="#b5561f" stroke-width="5" opacity=".45"/>
+  <rect x="600" y="458" width="210" height="24" rx="5" fill="#fffdf9"/>
+  <rect x="600" y="458" width="210" height="24" rx="5" fill="#0e6b6b" opacity=".85"/>
+  <rect x="388" y="458" width="24" height="24" fill="#fffdf9" stroke="#1b1813" stroke-width="3.5"/>
+  <circle cx="930" cy="470" r="12" fill="#fffdf9" stroke="#b5561f" stroke-width="5"/>
+  <rect x="699" y="452" width="12" height="36" fill="#1b1813" stroke="#fffdf9" stroke-width="2"/>
+  <g class="b" font-size="19" fill="#5d574d" text-anchor="middle">
+    <text x="400" y="524">expected</text>
+    <text x="560" y="524">league average</text>
+    <text x="705" y="524">best guess</text>
+    <text x="930" y="524">this season so far</text>
+  </g>
+
+  <text class="l" x="72" y="592" font-size="28" fill="#1b1813">wangsix.github.io/is-it-real</text>
+  <text class="b" x="1128" y="592" font-size="22" fill="#5d574d" text-anchor="end">Updated daily</text>
+</svg>

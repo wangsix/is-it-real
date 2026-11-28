@@ -2,6 +2,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Is It Real? · NBA team ratings</title>
+<meta name="description" content="Which NBA hot and cold starts are real, and which are luck? Team and player ratings that weigh this season against what we expected, updated daily.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Is It Real?">
+<meta property="og:title" content="Is It Real? · NBA team ratings">
+<meta property="og:description" content="Which NBA hot and cold starts are real, and which are luck? Updated daily.">
+<meta property="og:url" content="https://wangsix.github.io/is-it-real/">
+<meta property="og:image" content="https://wangsix.github.io/is-it-real/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Is it real? NBA hot and cold starts: skill or luck.">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14.5' fill='%23c8622a'/%3E%3Cg fill='none' stroke='%231b1813' stroke-width='1.8'%3E%3Ccircle cx='16' cy='16' r='14.5'/%3E%3Cpath d='M1.5 16h29M16 1.5v29M6.2 5.4c4.6 5.6 4.6 15.6 0 21.2M25.8 5.4c-4.6 5.6-4.6 15.6 0 21.2'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -276,8 +287,17 @@
   .prow .val, .prow .read { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pmore { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
   .pmore:empty { display: none; }
-  .ov .btn, .pmore .btn { font: inherit; font-size: 14px; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
-  .ov .btn:hover, .pmore .btn:hover { background: var(--accent); color: var(--surface); }
+  .ov .btn, .pmore .btn, .share .btn { font: inherit; font-size: 14px; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
+  .ov .btn:hover, .pmore .btn:hover, .share .btn:hover { background: var(--accent); color: var(--surface); }
+  .ov .sharerow { margin: 10px 0 0; }
+  dialog.share { width: min(440px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 16px; border: 1px solid var(--line-strong);
+    border-radius: 12px; background: var(--surface); color: var(--fg); }
+  dialog.share::backdrop { background: rgba(0, 0, 0, .45); }
+  dialog.share h3 { margin: 0 0 10px; }
+  dialog.share img { display: block; width: auto; height: auto; max-width: 100%; max-height: min(56vh, 480px); margin: 0 auto; border: 1px solid var(--line); border-radius: 6px; }
+  dialog.share .hint { margin: 10px 0; min-height: 2.6em; }
+  dialog.share .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  dialog.share .btn.pri { background: var(--accent); color: var(--surface); }
   @media (max-width: 620px) {
     .prow { grid-template-columns: minmax(0, 1fr) max-content; grid-template-areas: "who read" "stat val" "plot plot"; gap: 2px 10px; padding: 7px 0; }
     .prow.hd { display: none; }
@@ -308,7 +328,8 @@
 
   <!-- ===== today (overview) ===== -->
   <section id="v-overview" class="ov" hidden>
-    <div><h2 id="ovHead"></h2><p class="lede" id="ovLede"></p></div>
+    <div><h2 id="ovHead"></h2><p class="lede" id="ovLede"></p>
+      <p class="sharerow"><button type="button" class="btn" id="ovShare"><span class="bi"><span lang="en">Share as image</span><span lang="zh-Hant">分享圖片</span></span></button></p></div>
     <div id="ovHero"></div>
     <div id="ovSurprises"></div>
     <div id="ovMine"></div>
@@ -337,6 +358,7 @@
   </div>
   <p class="summary" id="summary" aria-live="polite"></p>
   <div class="pop" id="pop" role="dialog" aria-modal="false" hidden></div>
+  <dialog class="share" id="shareDlg" aria-labelledby="shareTitle"></dialog>
 
   <!-- ===== by stat ===== -->
   <section id="v-bystat" class="panel">
@@ -1131,7 +1153,7 @@
     const late = t.g >= OV_LATE_G;   // past mid-season it is no longer a "start"
     const label = kind === "early" ? T("Too early to tell", "言之過早") : kind === "flat" ? T("About as expected", "大致符合預期")
       : t.hot ? (late ? T("Above expectation", "優於預期") : T("Hot start", "開季火熱")) : (late ? T("Below expectation", "不如預期") : T("Cold start", "開季低迷"));
-    let txt, chip = "";
+    let txt, chip = "", chipC = null;   // chipC: [class, word] of the chip, for the share image
     if (kind === "early") {
       txt = T(`Expected <b>${f(t.exp)}</b>, playing at <b>${f(t.raw)}</b>. That is too few games to read much into yet: best guess <b>${f(t.guess)}</b> (${range}).`,
               `季前預期 <b>${f(t.exp)}</b>，本季打出 <b>${f(t.raw)}</b>。場數還太少，看不出太多：最佳估計 <b>${f(t.guess)}</b>（${range}）。`);
@@ -1148,11 +1170,11 @@
               `季前預期 <b>${f(t.exp)}</b>，本季打出 <b>${f(t.raw)}</b>。${belief}${pc < 5 || t.share > 1 ? "：" : " "}<b>${f(t.guess)}</b>（${range}）。`);
       const c = t.zReal >= 2 ? ["good", "clearly real", "明顯是真的"] : t.zReal >= 1 ? ["good", "likely real", "可能是真的"] : ["neutral", "too early to tell", "言之過早"];
       if (c[0] === "good" && !t.hot) c[0] = "bad";   // a real slump is real, but not good news
-      chip = `<span class="chip ${c[0]}">${T(c[1], c[2])}</span>`;
+      chip = `<span class="chip ${c[0]}">${T(c[1], c[2])}</span>`; chipC = [c[0], T(c[1], c[2])];
     }
     if (Math.abs(t.opp) >= OV_OPP_MIN) txt += T(` That includes <b>${fmt(t.opp, st, { signed: true })}</b> for ${t.opp > 0 ? "strong" : "weak"} opponents so far.`,
                                                 `其中 <b>${fmt(t.opp, st, { signed: true })}</b> 來自對手強度（至今賽程偏${t.opp > 0 ? "強" : "弱"}）。`);
-    return { label, txt, chip, svg };
+    return { label, txt, chip, chipC, svg };
   }
   function ovCard(st, t, kind) {
     const c = ovParts(st, t, kind);
@@ -1258,6 +1280,7 @@
     const all = st.rows.map(r => ovTeam(st, r)).filter(Boolean);
     const big = phase === "early" ? [] : all.filter(t => Math.abs(t.z) >= 1);   // surprises: at least one sampling SD from the expectation
     $("ovHead").textContent = ovHeadline(G, phase, big);
+    ovNow = { st, G, all, big };
     $("ovLede").textContent = phase === "late"
       ? T("By mid-season most of a team's numbers are real, but some luck remains. We still weigh this season's results against what we expected before it.",
           "到了季中，球隊數據大多已是真實水準，但仍有些運氣成分。我們仍把本季表現和季前預期放在一起衡量。")
@@ -1291,10 +1314,12 @@
     const mine = all.find(t => t.team === team);
     $("ovMine").innerHTML = `<h3>${T("Your team", "你的球隊")}</h3><div class="row" style="margin-bottom:8px"><select id="ovTeam" aria-label="${T("Team", "球隊")}">` +
       DATA.teams.map(t => `<option${t === team ? " selected" : ""}>${t}</option>`).join("") + `</select>` +
-      `<button type="button" class="btn" id="ovCardBtn">${T("Team page: every stat →", "球隊頁：全部數據 →")}</button></div>` +
+      `<button type="button" class="btn" id="ovCardBtn">${T("Team page: every stat →", "球隊頁：全部數據 →")}</button>` +
+      (mine ? `<button type="button" class="btn" id="ovShareTeam">${T("Share this card", "分享這張卡片")}</button>` : "") + `</div>` +
       (mine ? `<div class="scards">${ovCard(st, mine, ovKind(mine, G))}</div>` : "");
     $("ovTeam").addEventListener("change", ev => { state.team = ev.target.value; render(); });
     $("ovCardBtn").addEventListener("click", () => { state.team = $("ovTeam").value; go("byteam"); });
+    if (mine) $("ovShareTeam").addEventListener("click", () => openShare(mine.team));
     drawOvPlayers();
     $("ovFoot").innerHTML = T(`Best guess: the Current form model with the Continuity prior; the likely range covers the true level about 68% of the time. "We believe X%" is how far the best guess has moved from the expectation toward this season's results. It is lower than the skill share above because last season is known too. The Lab shows every stat, model and prior. <a class="xl" href="${EXPLAINER}" target="_blank" rel="noopener">How it works</a>.`,
                               `最佳估計：近況模型搭配陣容延續先驗；可能範圍約有 68% 的機率涵蓋真實水準。「相信 X%」是最佳估計從季前預期往本季表現移動了多少。它比上方的實力比例低，因為我們也知道上季的表現。「進階」有每項數據、模型與先驗。<a class="xl" href="${EXPLAINER}" target="_blank" rel="noopener">方法說明</a>。`);
@@ -1457,6 +1482,183 @@
     $("pQuery").addEventListener("input", () => { state.pq = $("pQuery").value; pLimit = P_PAGE; drawPlayers(); save(); });
     $("pShow").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.preal = b.dataset.show === "real"; pLimit = P_PAGE; render(); });
   }
+
+  // ---------- share image ----------
+  // A fixed-size picture for social posts: every team (1080 x 1350) or one team's card (1200 x 675).
+  // Drawn on a canvas from the Today numbers, in the page's current theme and language (a canvas,
+  // not a copy of the page's SVG, so the web fonts carry over).  Nothing leaves the browser.
+  const SITE = "wangsix.github.io/is-it-real";
+  let ovNow = null;   // what drawOverview last showed: { st, G, all, big }
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function sharePen(W, H, scale) {
+    const cv = document.createElement("canvas"); cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
+    const c = cv.getContext("2d"); c.scale(scale, scale);
+    const col = {}; ["bg", "surface", "stripe", "fg", "muted", "line", "line-strong", "accent", "raw", "good", "good-soft", "bad", "bad-soft", "neutral-soft"].forEach(k => { col[k] = cssVar("--" + k); });
+    const fam = { display: cssVar("--display"), label: cssVar("--label"), body: cssVar("--body") };
+    const text = (str, x, y, font, fill, align = "left") => { c.font = font; c.fillStyle = fill; c.textAlign = align; c.fillText(str, x, y); return c.measureText(str).width; };
+    // greedy line breaks: between words, and between CJK characters (never before closing punctuation)
+    const wrap = (str, font, maxW) => {
+      c.font = font;
+      const toks = str.match(/[　-鿿＀-￯]\s*|[^\s　-鿿＀-￯]+\s*/g) || [], lines = [];
+      let cur = "";
+      toks.forEach(tk => {
+        if (cur && c.measureText((cur + tk).trimEnd()).width > maxW && !/^[，。：；、）！？]/.test(tk)) { lines.push(cur.trimEnd()); cur = tk; } else cur += tk;
+      });
+      if (cur.trim()) lines.push(cur.trimEnd());
+      return lines;
+    };
+    const rrect = (x, y, w, h, r) => { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
+    const line = (x1, y1, x2, y2, stroke, lw = 1, dash = []) => { c.beginPath(); c.setLineDash(dash); c.moveTo(x1, y1); c.lineTo(x2, y2); c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); c.setLineDash([]); };
+    return { cv, c, col, fam, W, H, text, wrap, rrect, line };
+  }
+  // background, name and date on top, address and source at the bottom
+  function shareFrame(P, pad) {
+    const { c, col, fam, W, H, text, line } = P;
+    c.fillStyle = col.bg; c.fillRect(0, 0, W, H);
+    c.save(); c.translate(pad, pad); c.scale(18 / 32, 18 / 32);
+    c.beginPath(); c.arc(16, 16, 14.5, 0, 2 * Math.PI); c.fillStyle = "#c8622a"; c.fill();
+    c.strokeStyle = "#1b1813"; c.lineWidth = 1.8; c.stroke();
+    c.stroke(new Path2D("M1.5 16h29M16 1.5v29M6.2 5.4c4.6 5.6 4.6 15.6 0 21.2M25.8 5.4c-4.6 5.6-4.6 15.6 0 21.2"));
+    c.restore();
+    text(T("Is it real?", "是真的嗎？"), pad + 25, pad + 15, `700 19px ${fam.display}`, col.fg);
+    text(T(`${DATA.season} · games through ${DATA.through || "?"}`, `${DATA.season} 球季 · 比賽至 ${DATA.through || "?"}`), W - pad, pad + 14, `400 12px ${fam.body}`, col.muted, "right");
+    line(pad, H - 40, W - pad, H - 40, col.line);
+    text(SITE, pad, H - 18, `600 14px ${fam.label}`, col.fg);
+    text(T("Data: Basketball-Reference.com", "資料：Basketball-Reference.com"), W - pad, H - 18, `400 11.5px ${fam.body}`, col.muted, "right");
+  }
+  // one team's marks, as on the page: gap line, likely range, expected, this season, best guess
+  function shareMarks(P, t, X, cy, k) {
+    const { c, col, rrect, line } = P;
+    c.globalAlpha = .45; line(X(t.exp), cy, X(t.raw), cy, col.raw, 2 * k); c.globalAlpha = 1;
+    const xr = X(t.guess - t.s), wr = Math.max(1, X(t.guess + t.s) - xr);
+    c.globalAlpha = .85; rrect(xr, cy - 4 * k, wr, 8 * k, 2 * k); c.fillStyle = col.accent; c.fill(); c.globalAlpha = 1;
+    c.fillStyle = col.surface; c.strokeStyle = col.fg; c.lineWidth = 1.3 * k;
+    c.beginPath(); c.rect(X(t.exp) - 4 * k, cy - 4 * k, 8 * k, 8 * k); c.fill(); c.stroke();
+    c.beginPath(); c.arc(X(t.raw), cy, 4 * k, 0, 2 * Math.PI); c.strokeStyle = col.raw; c.lineWidth = 2 * k; c.fill(); c.stroke();
+    c.beginPath(); c.rect(X(t.guess) - 2 * k, cy - 6 * k, 4 * k, 12 * k); c.fillStyle = col.fg; c.strokeStyle = col.surface; c.lineWidth = k; c.fill(); c.stroke();
+  }
+  // legend swatches, the same shapes as shareMarks; each draws itself centred on (x + 8, y)
+  const SHARE_KEY = [
+    [(P, x, y) => { P.c.beginPath(); P.c.rect(x + 3.5, y - 4.5, 9, 9); P.c.fillStyle = P.col.surface; P.c.strokeStyle = P.col.fg; P.c.lineWidth = 1.3; P.c.fill(); P.c.stroke(); }, "expected before the season", "季前預期"],
+    [(P, x, y) => { P.c.beginPath(); P.c.arc(x + 8, y, 4.5, 0, 2 * Math.PI); P.c.fillStyle = P.col.surface; P.c.strokeStyle = P.col.raw; P.c.lineWidth = 2; P.c.fill(); P.c.stroke(); }, "this season so far", "本季至今"],
+    [(P, x, y) => { P.c.fillStyle = P.col.fg; P.c.fillRect(x + 6, y - 6, 4, 12); }, "best guess", "最佳估計"],
+    [(P, x, y) => { P.c.globalAlpha = .85; P.rrect(x, y - 4, 16, 8, 2); P.c.fillStyle = P.col.accent; P.c.fill(); P.c.globalAlpha = 1; }, "likely range (68%)", "可能範圍（68%）"],
+    [(P, x, y) => P.line(x + 8, y - 7, x + 8, y + 7, P.col.fg, 1, [2, 2]), "league average", "聯盟平均"],
+  ];
+  function shareLeague() {
+    const { st, all, big } = ovNow, W = 540, H = 675, pad = 26, P = sharePen(W, H, 2), { c, col, fam, text, wrap, rrect, line } = P;
+    shareFrame(P, pad);
+    let y = pad + 56;
+    wrap($("ovHead").textContent, `700 30px ${fam.display}`, W - 2 * pad).slice(0, 3).forEach(l => { text(l, pad, y, `700 30px ${fam.display}`, col.fg); y += 32; });
+    y -= 12;
+    wrap(T("Point margin per 100 possessions, best first. ▲▼ marks a start that looks real.", "每 100 回合淨勝分，由高到低。▲▼ 標出看來是真的開季表現。"), `400 12.5px ${fam.body}`, W - 2 * pad)
+      .slice(0, 2).forEach(l => { text(l, pad, y, `400 12.5px ${fam.body}`, col.muted); y += 17; });
+    y += 3;
+    let x = pad; const kf = `400 11.5px ${fam.body}`;
+    SHARE_KEY.forEach(([draw, en, zh]) => {
+      c.font = kf; const w = 21 + c.measureText(T(en, zh)).width;
+      if (x + w > W - pad) { x = pad; y += 18; }
+      draw(P, x, y - 4); text(T(en, zh), x + 21, y, kf, col.muted); x += w + 12;
+    });
+    // the chart: a panel that takes the rest of the height
+    const rows = all.slice().sort((a, b) => (st.lower_is_better ? -1 : 1) * (b.guess - a.guess));
+    const top = y + 12, bottom = H - 52, head = 20, rowH = Math.min(18, (bottom - top - head - 8) / rows.length), k = Math.min(1, rowH / 16);
+    rrect(pad, top, W - 2 * pad, head + rows.length * rowH + 8, 8); c.fillStyle = col.surface; c.fill(); c.strokeStyle = col.line; c.lineWidth = 1; c.stroke();
+    const left = pad + 54, right = W - pad - 44, [lo, hi] = domain(st), X = v => left + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (right - left);
+    const y0 = top + head, y1 = y0 + rows.length * rowH, fs = Math.min(13, rowH * .82);
+    const flag = new Map(big.filter(t => t.zReal >= 1).map(t => [t.team, t.hot ? col.good : col.bad]));
+    rows.forEach((t, i) => { if (i % 2) { c.fillStyle = col.stripe; c.fillRect(pad + 1, y0 + i * rowH, W - 2 * pad - 2, rowH); } });
+    niceTicks(lo, hi, 5).forEach(v => {
+      line(X(v), y0, X(v), y1, col.line);
+      text((signedStat(st) && v > 0 ? "+" : "") + v, X(v), y0 - 6, `400 10.5px ${fam.body}`, col.muted, "center");
+    });
+    text(T("best guess", "最佳估計"), W - pad - 8, y0 - 6, `400 10.5px ${fam.body}`, col.muted, "right");
+    line(X(st.league_mean), y0, X(st.league_mean), y1, col.fg, 1, [3, 3]);
+    rows.forEach((t, i) => {
+      const cy = y0 + (i + .5) * rowH, f = flag.get(t.team);
+      text(t.team + (f ? (t.hot ? " ▲" : " ▼") : ""), pad + 8, cy + fs * .36, `600 ${fs}px ${fam.label}`, f || col.fg);
+      shareMarks(P, t, X, cy, k);
+      text(fmt(t.guess, st), W - pad - 8, cy + fs * .36, `500 ${fs * .93}px ${fam.body}`, col.fg, "right");
+    });
+    return { cv: P.cv, name: `is-it-real-${DATA.through || DATA.season}.png`, title: $("ovHead").textContent,
+             alt: T(`Chart of every team's expected, current and best-guess point margin. ${$("ovHead").textContent}.`, `全部球隊的季前預期、本季與最佳估計淨勝分圖。${$("ovHead").textContent}。`) };
+  }
+  function shareTeam(team) {
+    const { st, G, all } = ovNow, t = all.find(a => a.team === team), kind = ovKind(t, G), cd = ovParts(st, t, kind);
+    const W = 800, H = 450, pad = 36, P = sharePen(W, H, 1.5), { c, col, fam, text, wrap, rrect, line } = P, f = v => fmt(v, st);
+    shareFrame(P, pad);
+    const tone = kind ? col.fg : t.hot ? col.good : col.bad;
+    const tw = text(t.team, pad, pad + 96, `700 76px ${fam.display}`, col.fg);
+    text(`${cd.label} · ${T(`${t.g} games`, `${t.g} 場`)}`, pad + tw + 18, pad + 66, `600 24px ${fam.label}`, tone);
+    text(T("Point margin per 100 possessions (Net Rtg)", "每 100 回合淨勝分（Net Rtg）"), pad + tw + 18, pad + 92, `400 14px ${fam.body}`, col.muted);
+    if (cd.chipC) {
+      const [cls, word] = cd.chipC, label = (cls === "good" ? "▲ " : cls === "bad" ? "▼ " : "") + word, cf = `600 15px ${fam.body}`;
+      c.font = cf; const w = c.measureText(label).width + 24;
+      rrect(W - pad - w, pad + 46, w, 28, 14); c.fillStyle = col[cls === "neutral" ? "neutral-soft" : cls + "-soft"]; c.fill();
+      text(label, W - pad - w / 2, pad + 65, cf, cls === "neutral" ? col.muted : col[cls], "center");
+    }
+    // the strip, on the same axis as the page
+    const py = pad + 124, cy = py + 38, [lo, hi] = domain(st), X = v => pad + 18 + (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * (W - 2 * pad - 36);
+    rrect(pad, py, W - 2 * pad, 76, 8); c.fillStyle = col.surface; c.fill(); c.strokeStyle = col.line; c.lineWidth = 1; c.stroke();
+    line(pad + 18, cy, W - pad - 18, cy, col["line-strong"]);
+    line(X(st.league_mean), py + 8, X(st.league_mean), py + 68, col.fg, 1, [3, 3]);
+    shareMarks(P, t, X, cy, 2);
+    // the three numbers, each under its own mark shape
+    const cw = (W - 2 * pad) / 3, ny = py + 102;
+    [[0, f(t.exp), ""], [1, f(t.raw), ""],
+     [2, f(t.guess), T(`likely ${f(t.guess - t.s)} to ${f(t.guess + t.s)}`, `可能介於 ${f(t.guess - t.s)} 到 ${f(t.guess + t.s)}`)]].forEach(([i, num, extra], j) => {
+      const x = pad + j * cw, key = SHARE_KEY[i];
+      key[0](P, x, ny - 4); text(T(key[1], key[2]), x + 22, ny, `400 13.5px ${fam.body}`, col.muted);
+      const nw = text(num, x, ny + 42, `700 40px ${fam.display}`, col.fg);
+      if (extra) text(extra, x + nw + 10, ny + 42, `400 13.5px ${fam.body}`, col.muted);
+    });
+    let y = ny + 76;
+    wrap(cd.txt.replace(/<[^>]+>/g, ""), `400 15px ${fam.body}`, W - 2 * pad).slice(0, 3).forEach(l => { text(l, pad, y, `400 15px ${fam.body}`, col.fg); y += 22; });
+    const title = `${t.team}${T(": ", "：")}${cd.label}${cd.chipC ? T(", ", "，") + cd.chipC[1] : ""}`;
+    return { cv: P.cv, name: `is-it-real-${t.team}-${DATA.through || DATA.season}.png`, title,
+             alt: T(`${t.team}: expected ${f(t.exp)}, this season ${f(t.raw)}, best guess ${f(t.guess)}.`, `${t.team}：季前預期 ${f(t.exp)}，本季 ${f(t.raw)}，最佳估計 ${f(t.guess)}。`) };
+  }
+  // The dialog shows the picture first, so the Share button's click is a fresh user action with the
+  // file ready (browsers refuse a share that starts long after the click).
+  let shareUrl = null;
+  async function openShare(team) {
+    if (!ovNow) return;
+    if (document.fonts) {   // the web fonts must be loaded before the canvas can use them; do not wait long
+      const fams = ["700 30px " + cssVar("--display"), "600 14px " + cssVar("--label"), "400 14px " + cssVar("--body"), "500 14px " + cssVar("--body"), "600 14px " + cssVar("--body")];
+      try { await Promise.race([Promise.all(fams.map(f => document.fonts.load(f, "Is it real? 0123"))), new Promise(r => setTimeout(r, 1500))]); } catch (e) {}
+    }
+    const pic = team ? shareTeam(team) : shareLeague();
+    const blob = await new Promise(r => pic.cv.toBlob(r, "image/png"));
+    if (!blob) return;
+    const file = new File([blob], pic.name, { type: "image/png" }), dlg = $("shareDlg");
+    if (shareUrl) URL.revokeObjectURL(shareUrl);
+    shareUrl = URL.createObjectURL(blob);
+    const saveFile = () => { const a = document.createElement("a"); a.href = shareUrl; a.download = pic.name; document.body.append(a); a.click(); a.remove(); };
+    if (!dlg.showModal) return saveFile();
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    const canCopy = !!(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem);
+    dlg.innerHTML = `<h3 id="shareTitle">${T("Share as image", "分享圖片")}</h3><img id="shareImg" width="${pic.cv.width}" height="${pic.cv.height}">` +
+      `<p class="hint" id="shareMsg" aria-live="polite">${T(`${pic.cv.width} × ${pic.cv.height} px, in the page's current theme and language.`, `${pic.cv.width} × ${pic.cv.height} px，使用頁面目前的主題與語言。`)}</p><div class="row">` +
+      (canShare ? `<button type="button" class="btn pri" id="shareGo">${T("Share…", "分享…")}</button>` : "") +
+      `<button type="button" class="btn${canShare ? "" : " pri"}" id="shareSave">${T("Download", "下載")}</button>` +
+      (canCopy ? `<button type="button" class="btn" id="shareCopy">${T("Copy", "複製")}</button>` : "") +
+      `<button type="button" class="btn" id="shareClose">${T("Close", "關閉")}</button></div>`;
+    $("shareImg").src = shareUrl; $("shareImg").alt = pic.alt;
+    const say = msg => { $("shareMsg").textContent = msg; };
+    if (canShare) $("shareGo").addEventListener("click", () => {
+      navigator.share({ files: [file], text: `${pic.title} · https://${SITE}/` })
+        .catch(e => { if (e.name !== "AbortError") say(T("Could not open the share sheet. Use Download instead.", "無法開啟分享選單，請改用下載。")); });
+    });
+    $("shareSave").addEventListener("click", saveFile);
+    if (canCopy) $("shareCopy").addEventListener("click", () => {
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+        .then(() => say(T("Copied. Paste it into a post.", "已複製，可直接貼到貼文裡。")), () => say(T("Could not copy. Use Download instead.", "無法複製，請改用下載。")));
+    });
+    $("shareClose").addEventListener("click", () => dlg.close());
+    dlg.showModal();
+  }
+  $("ovShare").addEventListener("click", () => openShare(null));
+  $("shareDlg").addEventListener("click", ev => { if (ev.target === ev.currentTarget) ev.currentTarget.close(); });   // a click on the backdrop
 
   // ---------- routing ----------
   const VIEWS = ["overview", "bystat", "funnel", "byteam", "table"].concat(PD ? ["players"] : []);
