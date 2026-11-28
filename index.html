@@ -1479,7 +1479,7 @@
   if (PD) {
     $("pStat").addEventListener("change", () => { state.pstat = $("pStat").value; pLimit = P_PAGE; render(); });
     $("pTeam").addEventListener("change", () => { state.pteam = $("pTeam").value; pLimit = P_PAGE; render(); });
-    $("pQuery").addEventListener("input", () => { state.pq = $("pQuery").value; pLimit = P_PAGE; drawPlayers(); save(); });
+    $("pQuery").addEventListener("input", () => { state.pq = $("pQuery").value; pLimit = P_PAGE; drawPlayers(); save(); syncAddr(); });
     $("pShow").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state.preal = b.dataset.show === "real"; pLimit = P_PAGE; render(); });
   }
 
@@ -1615,7 +1615,7 @@
     let y = ny + 76;
     wrap(cd.txt.replace(/<[^>]+>/g, ""), `400 15px ${fam.body}`, W - 2 * pad).slice(0, 3).forEach(l => { text(l, pad, y, `400 15px ${fam.body}`, col.fg); y += 22; });
     const title = `${t.team}${T(": ", "：")}${cd.label}${cd.chipC ? T(", ", "，") + cd.chipC[1] : ""}`;
-    return { cv: P.cv, name: `is-it-real-${t.team}-${DATA.through || DATA.season}.png`, title,
+    return { cv: P.cv, name: `is-it-real-${t.team}-${DATA.through || DATA.season}.png`, title, hash: "#teams/" + t.team,
              alt: T(`${t.team}: expected ${f(t.exp)}, this season ${f(t.raw)}, best guess ${f(t.guess)}.`, `${t.team}：季前預期 ${f(t.exp)}，本季 ${f(t.raw)}，最佳估計 ${f(t.guess)}。`) };
   }
   // The dialog shows the picture first, so the Share button's click is a fresh user action with the
@@ -1646,7 +1646,7 @@
     $("shareImg").src = shareUrl; $("shareImg").alt = pic.alt;
     const say = msg => { $("shareMsg").textContent = msg; };
     if (canShare) $("shareGo").addEventListener("click", () => {
-      navigator.share({ files: [file], text: `${pic.title} · https://${SITE}/` })
+      navigator.share({ files: [file], text: `${pic.title} · https://${SITE}/${pic.hash || ""}` })
         .catch(e => { if (e.name !== "AbortError") say(T("Could not open the share sheet. Use Download instead.", "無法開啟分享選單，請改用下載。")); });
     });
     $("shareSave").addEventListener("click", saveFile);
@@ -1666,6 +1666,29 @@
   // address bar names; the old names (#overview, #byteam) still work
   const HASH = { overview: "today", byteam: "teams", bystat: "bystat", funnel: "funnel", table: "table", players: "players" };
   const fromHash = h => h === "today" ? "overview" : h === "teams" ? "byteam" : h === "lab" ? (LAB.includes(state.lab) ? state.lab : "bystat") : h;
+  // Deep links: the address can name what the view shows, after a slash.  #teams/MIN is a team's page,
+  // #players/MIN the players of a team, #players/<name> a name search, #bystat/Net%20Rtg (also funnel,
+  // table) a stat.  addr() writes the address for the current state; fromAddr() reads one into the state.
+  const addr = () => {
+    const v = state.view;
+    const a = v === "byteam" ? state.team : v === "players" ? (state.pteam !== "all" ? state.pteam : (state.pq || "").trim()) : LAB.includes(v) ? S().name : "";
+    return HASH[v] + (a ? "/" + encodeURIComponent(a) : "");
+  };
+  function fromAddr(h) {
+    const i = h.indexOf("/"), v = fromHash(i < 0 ? h : h.slice(0, i));
+    if (!VIEWS.includes(v)) return false;
+    let a = ""; if (i >= 0) { try { a = decodeURIComponent(h.slice(i + 1)).trim(); } catch (e) {} }
+    state.view = v;
+    if (!a) return true;
+    const team = DATA.teams.includes(a.toUpperCase()) ? a.toUpperCase() : null;
+    if (v === "byteam") { if (team) state.team = team; }
+    else if (v === "players") { if (team) { state.pteam = team; state.pq = ""; } else { state.pteam = "all"; state.pq = a; } }
+    else if (LAB.includes(v)) { const si = DATA.stats.findIndex(s => s.name.toLowerCase() === a.toLowerCase()); if (si >= 0 && si !== state.stat) { state.stat = si; state.sortKey = null; } }
+    return true;
+  }
+  // keep the address bar on the current team / filter / stat without adding a history entry for each
+  // (a first visit to the bare address stays bare)
+  const syncAddr = () => { const h = "#" + addr(); if (location.hash !== h && (location.hash || state.view !== "overview")) { try { history.replaceState(null, "", h); } catch (e) {} } };   // a sandboxed frame may refuse
   if (!VIEWS.includes(state.view)) state.view = "overview";
   if (!LAB.includes(state.lab)) state.lab = "bystat";
   function applyLang() {
@@ -1707,11 +1730,16 @@
     if (!lab) { closePop(); reservedW = -1; } else { reserveSummary(); summary(); refreshPop(); }   // a hidden summary measures 0: measure again when it shows
     legend("legend"); legend("legend2"); legendFunnel();
     if (state.view === "players") { playersNote(); drawPlayers(); } else if (state.view === "overview") drawOverview(); else if (state.view === "bystat") drawForest(); else if (state.view === "funnel") drawFunnel(); else if (state.view === "byteam") drawTeam(); else drawTable();
-    save();
+    save(); syncAddr();
   }
   function go(view, keepScroll) { state.view = view; if (location.hash !== "#" + HASH[view]) location.hash = HASH[view]; render(); if (!keepScroll) window.scrollTo({ top: 0 }); }
-  window.addEventListener("hashchange", () => { const v = fromHash(location.hash.slice(1)); if (VIEWS.includes(v) && v !== state.view) { state.view = v; render(); window.scrollTo({ top: 0 }); } });
-  const h0 = fromHash(location.hash.slice(1)); if (VIEWS.includes(h0)) state.view = h0;
+  window.addEventListener("hashchange", () => {
+    const v0 = state.view, a0 = addr();
+    if (!fromAddr(location.hash.slice(1) || "today")) return;   // Back to the bare address: that entry showed Today
+    if (addr() === a0) return syncAddr();   // same place under a shorter name (#teams, #lab): write it out in full
+    pLimit = P_PAGE; render(); if (state.view !== v0) window.scrollTo({ top: 0 });
+  });
+  fromAddr(location.hash.slice(1));
   $("labNav").addEventListener("click", ev => { const b = ev.target.closest("button"); if (b) go(b.dataset.lab, true); });
   $("setBtn").addEventListener("click", () => { state.labOpen = !state.labOpen; render(); });
   $("allPriors").addEventListener("change", () => { state.allPriors = $("allPriors").checked; render(); });
