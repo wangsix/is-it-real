@@ -508,8 +508,8 @@
   DATA.stats.forEach((s, i) => { const o = document.createElement("option"); o.value = i; o.textContent = s.name; $("stat").appendChild(o); });
   MODELS.forEach(([k]) => { const b = document.createElement("button"); b.type = "button"; b.dataset.model = k; b.innerHTML = MLB(k); if (k === "full" && !DATA.has_full) b.disabled = true; $("modelSeg").appendChild(b); });
   priorNames.forEach(nm => { const b = document.createElement("button"); b.type = "button"; b.dataset.prior = nm; b.innerHTML = PLB(nm); $("priorSeg").appendChild(b); });
-  $("srcNote").innerHTML = `<span lang="en">Data: box scores from <a href="https://www.basketball-reference.com/" target="_blank" rel="noopener">Basketball-Reference.com</a> (Sports Reference LLC); k and σ<sub>e</sub> from ${seasonSpan(DATA.k_seasons, false)}. Each stat keeps one x-axis across models and priors, so a range that moves really moved. Method, definitions and back-tests: <a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">how it works</a>. Not affiliated with the NBA. Questions, errors or feedback: <a href="https://github.com/wangsix/is-it-real/issues" target="_blank" rel="noopener">GitHub Issues</a>.</span>` +
-    `<span lang="zh-Hant">資料來源：<a href="https://www.basketball-reference.com/" target="_blank" rel="noopener">Basketball-Reference.com</a>（Sports Reference LLC）逐場數據；k 與 σ<sub>e</sub> 取自 ${seasonSpan(DATA.k_seasons, true)} 球季。每項數據在不同模型與先驗之間使用同一條 x 軸，所以區間移動就是真的移動。方法、定義與回測：<a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">方法說明</a>。本站與 NBA 無關。問題、錯誤或意見：<a href="https://github.com/wangsix/is-it-real/issues" target="_blank" rel="noopener">GitHub Issues</a>。</span>`;
+  $("srcNote").innerHTML = `<span lang="en">Data: box scores from <a href="https://www.basketball-reference.com/" target="_blank" rel="noopener">Basketball-Reference.com</a> (Sports Reference LLC); k and σ<sub>e</sub> from ${seasonSpan(DATA.k_seasons, false)}. Each stat keeps one x-axis across models and priors, so a range that moves really moved. Method, definitions and back-tests: <a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">how it works</a>. Not affiliated with the NBA. Questions, errors or feedback: <a href="https://github.com/wangsix/is-it-real/issues" target="_blank" rel="noopener">GitHub Issues</a>. Visits are counted with <a href="https://www.goatcounter.com/" target="_blank" rel="noopener">GoatCounter</a>, without cookies.</span>` +
+    `<span lang="zh-Hant">資料來源：<a href="https://www.basketball-reference.com/" target="_blank" rel="noopener">Basketball-Reference.com</a>（Sports Reference LLC）逐場數據；k 與 σ<sub>e</sub> 取自 ${seasonSpan(DATA.k_seasons, true)} 球季。每項數據在不同模型與先驗之間使用同一條 x 軸，所以區間移動就是真的移動。方法、定義與回測：<a class="howlink xl" href="explainer.html" target="_blank" rel="noopener">方法說明</a>。本站與 NBA 無關。問題、錯誤或意見：<a href="https://github.com/wangsix/is-it-real/issues" target="_blank" rel="noopener">GitHub Issues</a>。以 <a href="https://www.goatcounter.com/" target="_blank" rel="noopener">GoatCounter</a> 統計造訪次數，不使用 cookie。</span>`;
 
   const S = () => DATA.stats[state.stat];
   const hasFull = st => st.beta != null;
@@ -1768,4 +1768,13 @@
   if (document.fonts) document.fonts.ready.then(() => { reservedW = -1; render(); });  // measure again when the web fonts are loaded
   }
 })();
+</script>
+<script>
+  // Visit counts with GoatCounter (no cookies), on the live site only: not on a local server, a copy
+  // or the single-file build.  One count per page load; moving between tabs is not counted.
+  if (location.hostname === "wangsix.github.io") {
+    const s = document.createElement("script");
+    s.async = true; s.dataset.goatcounter = "https://wangsix.goatcounter.com/count"; s.src = "https://gc.zgo.at/count.js";
+    document.head.appendChild(s);
+  }
 </script>
