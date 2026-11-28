@@ -9,7 +9,7 @@ served by GitHub Pages (static files, no server).
 
 | file | what it is |
 |---|---|
-| `index.html` | the rank page: tabs Today, Teams, Players and Lab (By stat, Funnel, Table).  Loads `data/ratings.json`.  Addresses `#today`, `#teams`, `#players`, `#lab`, `#bystat`, `#funnel`, `#table` (the older `#overview` and `#byteam` still work) |
+| `index.html` | the rank page: tabs Today, Teams, Players and Lab (By stat, Funnel, Table).  Loads `data/ratings.json`.  Addresses `#today`, `#teams`, `#players`, `#lab`, `#bystat`, `#funnel`, `#table` (the older `#overview` and `#byteam` still work).  Deep links: `#teams/MIN` (a team's page), `#players/MIN` (a team's players), `#players/<name>` (name search), `#bystat/Net%20Rtg` (a stat; also `#funnel/…`, `#table/…`).  The address bar follows the team, filter or stat on screen |
 | `explainer.html` | static walk-through of the method, English and 繁體中文 (EN/中文 switch; `?lang=zh` or the rank page's saved choice picks the start language).  A back link and a contents list (a fixed column on wide screens).  Each section opens with a plain summary, then the formal text.  Numbers are written in by hand |
 | `build.py` | makes one self-contained file with the data inlined (stdlib only) |
 | `og.png`, `og.svg` | the link-preview picture (1200 × 630) and its source |
